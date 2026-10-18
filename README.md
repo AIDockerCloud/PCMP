@@ -18,6 +18,32 @@
 
 ---
 
+## 🚀 极简上手：单文档开箱自举 (Zero-Tooling Quickstart)
+
+> [!IMPORTANT]
+> **PCMP 的核心灵魂是“单文档驱动一切”，绝不强制绑定任何软件工具或外部依赖。**
+
+在任何新项目中使用 PCMP，只需简单三步：
+
+1. **拷贝单文档**：将 [PROJECT_CONTEXT_ZH.md](PROJECT_CONTEXT_ZH.md)（或英文版 [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)）复制到新项目的根目录下；
+2. **一条指令初始化**：向你的 AI 助手（Cursor / Claude Code / Windsurf / GitHub Copilot / Antigravity 等）发送：
+   > `请读取 PROJECT_CONTEXT_ZH.md，初始化本项目的 ai/ 上下文管理体系并评估当前项目状态。`
+3. **完成自举**：AI 将全自动建立 `ai/` 状态目录。后续每次换新会话，AI 即可依据 `ai/STATE.md` 与 `ai/TASK.md` 毫秒级恢复进度并接管工作。
+
+---
+
+## 🏛️ 本仓库架构与分工说明 (Repository Architecture)
+
+为了让开发者既能获得**纯粹的协议规范**，又能获得**开箱即用的可选参考工具**，本仓库采用分层自洽结构：
+
+| 层次 | 包含内容 | 定位与说明 |
+| :--- | :--- | :--- |
+| **1. 核心协议规范 (Specification)** | `PROJECT_CONTEXT_ZH.md`<br>`PROJECT_CONTEXT.md` | **协议本体（核心必须）**。单文档自足，外部项目仅需拷贝此文件即可完整运作，零外部依赖。 |
+| **2. 可选参考工具 (Reference Tools)** | `scripts/pcmp_index.py` | **可选派生加速层**。基于 Python 3 原生标准库实现的 SQLite 派生索引工具。当历史文档较多时按需取用，不拷贝完全不影响核心规范运转。 |
+| **3. 本仓库自举范例 (Dogfooding Context)** | `ai/`<br>`AGENTS.md` | **实践范例**。展示 PCMP 规范如何管理本仓库自身的演进状态与架构决策。 |
+
+---
+
 ## ⚡ 核心原则 (Core Principles)
 
 1. **当前状态优先，但必读含定义 (Current State First)**  
@@ -89,11 +115,30 @@
 
 ---
 
-## 🛠️ 推荐搭配工具：STC (Simplified Technical Chinese)
+## 🛠️ 配套与推荐工具 (Ecosystem & Tools)
+
+### 1. 官方可选参考工具：SQLite 派生索引脚本 (`pcmp_index.py`)
+
+当项目长期演进、历史会话与决策较多时，可按需使用本仓库提供的单脚本 SQLite 索引加速层（基于 Python 3 原生标准库，**零外部 pip 依赖**）：
+
+```bash
+# 可选：下载单脚本到项目中（不下载完全不影响 PCMP 核心运作）
+curl -fsSL https://raw.githubusercontent.com/AIDockerCloud/PCMP/main/scripts/pcmp_index.py -o scripts/pcmp_index.py
+
+# 全量构建或增量更新派生缓存 (存放在 ai/.cache/index.sqlite，已被 .gitignore 忽略)
+python3 scripts/pcmp_index.py --rebuild
+python3 scripts/pcmp_index.py --update
+
+# 结构化过滤与全文检索
+python3 scripts/pcmp_index.py --query-decisions --status-filter Proposed
+python3 scripts/pcmp_index.py --query-tags --tag-filter proposal
+python3 scripts/pcmp_index.py --search "关键词"
+```
+
+### 2. 推荐搭配规范：STC (Simplified Technical Chinese)
 
 PCMP 推荐搭配 [STC (简体技术中文规范)](https://github.com/daimonia-ai/STC-Simplified-Technical-Chinese) 作为中文工程文档与人机对话的规范工具。
 
-### 安装与使用命令
 在项目中按需安装并初始化 STC 规则：
 ```bash
 # 1. 安装 STC 命令行与规则工具
@@ -106,14 +151,8 @@ npx stc init --defaults
 npx stc check <文件路径>
 ```
 
-### 推荐实践：材料审阅授权准则
-* **审阅授权准则（PCMP 推荐项）**：**审阅、审计或样式检查的材料由人类指定或显式授权挑选**；未获用户明确许可前，AI 不得擅自扫描全工程扩大审阅范围。
-
-### 许可证与署名说明 (License & Attribution)
-STC 项目遵循开源双许可协议：
-* 写作规则与词表采用 [CC BY 4.0 国际许可协议 (Creative Commons Attribution 4.0 International)](https://creativecommons.org/licenses/by/4.0/)；
-* 命令行工具与代码采用 [MIT License](https://opensource.org/licenses/MIT)；
-* 版权所有 (c) 2026 Daimonia (杭州代梦智能科技有限公司)。在引用、集成或分发时需保留原作者版权声明及许可链接。
+- **审阅授权准则（PCMP 推荐项）**：**审阅、审计或样式检查的材料由人类指定或显式授权挑选**；未获用户明确许可前，AI 不得擅自扫描全工程扩大审阅范围。
+- **许可证说明**：STC 写作规则采用 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)，工具代码采用 [MIT License](https://opensource.org/licenses/MIT)，版权所有 (c) 2026 Daimonia (杭州代梦智能科技有限公司)。
 
 ---
 
@@ -121,9 +160,10 @@ STC 项目遵循开源双许可协议：
 
 * **当前版本**：V2.1
 * **更新内容**：
+  - 明确“单文档开箱自举”核心定位与单仓库分层架构（规范 / 可选工具 / 自举范例）；
   - 引入能力边界声明（Non-promises）与冲突分级核验机制；
   - 规范 Frontmatter 变更标记（`revision`）与信息分层标注（`[事实]/[假设]/[提议]/[已确认]`）；
   - 架构决策记录（ADR）增加强制确认来源追溯；
   - 确立无历史记忆的新 Agent“恢复测试”验收标准；
-  - 规范派生索引层（SQLite 缓存）的只读可重建性与 `.gitignore` 策略；
-  - 增加推荐搭配技术中文工具（STC）安装使用说明、开源许可署名与材料审阅授权准则。
+  - 实现零依赖 Python 3 原生 SQLite 派生索引层（`scripts/pcmp_index.py`）；
+  - 增加推荐搭配技术中文工具（STC）安装使用说明与材料审阅授权准则。
