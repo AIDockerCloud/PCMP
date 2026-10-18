@@ -1,184 +1,251 @@
+---
+pcmp_version: "2.1"
+updated: 2026-10-19
+---
+
 # Project Context Management Protocol (PCMP)
 
-**Version:** 1.0  
-**Files:** `PROJECT_CONTEXT.md` / `PROJECT_CONTEXT_ZH.md`  
-**Scope:** AI-Agnostic / IDE-Agnostic Context Protocol  
-**Canonical Entry Point:** This document defines the **protocol**. Active project state is maintained under **`ai/`**.
+- **Version**: **2.1** (2026-10-19)
+- **Document Role**: This file is the **original generic protocol template**, containing no project-specific state or private details.
+- **Chinese Version**: [PROJECT_CONTEXT_ZH.md](PROJECT_CONTEXT_ZH.md) (Content is bidirectionally aligned; discrepancies are treated as translation synchronization tasks).
+- **Resolution Rule**: If `ai/PROJECT_CONTEXT.md` (project instance) exists, it takes precedence; otherwise, this root original is authoritative (see §3.1).
 
 ---
 
-## 1. Core Principles
+## 1. Capability Boundaries
 
-1. **Current State First**: AI agents must read `STATE.md` and `TASK.md` first. Never reconstruct current state by reading entire session histories.
-2. **Code as Ground Truth**: When documentation conflicts with actual code, the source code and tests are authoritative. Stale documentation must be updated.
-3. **Minimal Context**: Maintain only decision-relevant and actionable information. Old sessions should be periodically compressed.
-4. **AI-Agnostic**: Independent of any specific model, IDE, prompt format, or agent platform. Operates solely via filesystem and Markdown.
-5. **Phase-Independent Architecture & Traceability Specification**: Each development phase must maintain its own independent specifications under `docs/S{N}-{short_name}/` (e.g. `docs/S1-minimal-core/`):
-   * **Requirements-Features-Methods Traceability Matrix (`requirements_traceability.md`)**: Defines a clear mapping from user requirements to system capabilities and concrete code methods/functions, enabling future AI-driven iterative design and development;
-   * **Independent 4+1 Architectural View (`4_plus_1_view.md`)** and **Core Sequence Diagrams (`sequence_diagrams.md`)**: Accurately documents physical implementations, component dependencies, and invocation boundaries.
-6. **Decoupling Protocol from Product Code**: PCMP is strictly an engineering management protocol for human-AI collaboration on this repository. It must NEVER be hardcoded into product source code (e.g. `backend/`, `frontend/`) as a business dependency. The developed product must remain general-purpose and independent.
-7. **Dual-Track Project Structure & Standard Naming (S & S1~Sx)**:
-   * **Phase Standalone Projects (`phases/S{N}-{short_name}/` ➔ e.g. `phases/S1-minimal-core/`)**: Named with `S` + stage index + stage abbreviation. Each phase maintains its own self-contained codebase specifically fulfilling that phase's milestone goals, facilitating independent retrospective analysis.
-   * **Continuous Evolution Project (`continuous/` ➔ S)**: Represents the full integrated product, merging verified code from completed phases as development progresses.
+PCMP explicitly **does not promise** the following:
+1. **Does not promise complete preservation of entire chat dialogues**: Only preserves necessary context required for work resumption, handover, and decision traceability.
+2. **Does not promise automatic discovery by all AI platforms**: Automatic file discovery relies on platform/IDE adapter configurations (e.g., `.cursorrules`, `AGENTS.md`, `CLAUDE.md`).
+3. **Does not promise that `revision` acts as a distributed atomic lock**: It is a change-detection marker; concurrency safety relies on serialized write-back or a single merger workflow.
 
 ---
 
-## 2. Context Directory (`ai/`)
+## 2. Core Principles
+
+1. **Current State First, Including Definitions**  
+   AI takeover mandatory sequence = **This protocol + `ai/PROJECT.md` (goals & hard constraints) + `ai/STATE.md` + `ai/TASK.md`**. Never assume constraints from status summaries alone; never reconstruct current state by traversing entire chat histories.
+2. **Tiered Conflict Verification, No Absolute Priority**  
+   Code and tests prove the "current physical implementation," but do not automatically override user requirements, security constraints, or accepted decisions. On discrepancy: **Flag difference ➔ Verify evidence (requirements/ADR/tests) ➔ Decide whether to fix code or update documentation**.
+3. **Minimal Effective Context**  
+   Maintain only decision-relevant and actionable information; historical sessions are periodically compressed into summaries to prevent unbounded context growth.
+4. **AI- and Platform-Agnostic**  
+   Independent of any specific model, IDE, CLI, or cloud platform; operates entirely via local filesystem and Markdown.
+5. **Information Layering**  
+   All critical information is labeled with explicit state tags: `[fact]` / `[assumption]` / `[proposal]` / `[accepted]` / `[open]`. AI suggestions must not be recorded as accepted without human confirmation.
+6. **Decoupling Protocol from Product Code**  
+   PCMP is strictly a human-AI collaborative engineering convention. It must NEVER be hardcoded into product source code as a business or runtime dependency.
+7. **Markdown as Authority, Derivatives Fully Rebuildable**  
+   All authoritative facts and decisions live solely in Markdown files. Indexes and caches (e.g., SQLite) are transient derivatives; humans and AI can fully understand and take over projects without any derivatives.
+
+---
+
+## 3. Directory Structure & File Roles
 
 ```text
-ai/
-├── PROJECT.md          # Project identity, purpose, goals & scope (Long-lived)
-├── ARCHITECTURE.md     # System architecture, components & constraints (Long-lived)
-├── STATE.md            # Current project state snapshot (Dynamic)
-├── TASK.md             # Active task & acceptance criteria (Dynamic)
-├── PLAN.md             # High-level roadmap & milestones (Dynamic)
-├── DECISIONS.md        # Architecture Decision Records (ADR, Long-lived)
-├── ISSUES.md           # Known issues & risk tracking (Dynamic)
-├── sessions/           # Session history (Append-oriented, periodically compressed)
-└── proposals/          # Protocol improvement proposals (Append-oriented)
+Project Root/
+├── PROJECT_CONTEXT.md        # English full protocol (Original template)
+├── PROJECT_CONTEXT_ZH.md     # Chinese full protocol (Original template)
+├── .gitignore                # Ignored paths: Must include node_modules/ and ai/.cache/
+└── ai/
+    ├── PROJECT.md            # Identity, purpose, goals, scope & hard constraints (Long-lived)
+    ├── ARCHITECTURE.md       # Tech stack, architecture, modules, data flow & constraints (Long-lived)
+    ├── STATE.md              # Global project state snapshot (Dynamic)
+    ├── TASK.md               # Active single task & acceptance criteria (Dynamic)
+    ├── PLAN.md               # Roadmap & milestone planning (Dynamic)
+    ├── DECISIONS.md          # Architecture Decision Records (ADR, Long-lived)
+    ├── ISSUES.md             # Known issues & risk tracking (Dynamic)
+    ├── sessions/             # Session records (Append-only, periodically compressed)
+    ├── proposals/            # Protocol improvement proposals (Append-only)
+    ├── .cache/               # (Optional) Rebuildable index & cache (git-ignored)
+    └── PROJECT_CONTEXT.md / PROJECT_CONTEXT_ZH.md   # (Optional) Project instance (Precedes if present)
 ```
 
-### File Responsibilities
+> **Minimal Usable Set**: The two root originals constitute the minimal set. New projects start with just the originals; missing `ai/` files trigger the initialization flow (§5.1). All paths resolve relative to the **project root**.
 
-| File / Dir | Responsibility | Nature |
-| :--- | :--- | :--- |
-| `PROJECT.md` | Name, description, target users, goals, scope & non-goals | Long-lived |
-| `ARCHITECTURE.md` | Tech stack, system architecture, components, data flow & constraints | Long-lived |
-| `STATE.md` | State snapshot: completed, in progress, blocked, risks, next action | Dynamic |
-| `TASK.md` | Active task: objective, why, scope, criteria, progress, immediate action | Dynamic |
-| `PLAN.md` | Current phase, milestone, next steps & longer-term roadmap | Dynamic |
-| `DECISIONS.md` | ADRs: context, decision, reason, alternatives, consequences | Long-lived |
-| `ISSUES.md` | Issue tracking: ID, status, description, impact, workaround, component | Dynamic |
-| `sessions/` | Structured session records (`SESSION-YYYY-MM-DD-NNN.md`) | Append-only |
-| `proposals/` | Protocol enhancement proposals (`PROPOSAL-NNN-title.md`) | Append-only |
+### File Responsibilities Table
+
+| File / Directory | Responsibility | Update Nature | Authority Level |
+| :--- | :--- | :--- | :--- |
+| `ai/PROJECT.md` | Identity, mission, target users, scope, non-goals & hard constraints | Long-lived | Strong constraint |
+| `ai/ARCHITECTURE.md`| Architecture, module relationships, data flow & conventions | Long-lived | Strong guideline |
+| `ai/STATE.md` | Current state snapshot: completed, active, blocked, risks, next action | Dynamic | Real-time baseline |
+| `ai/TASK.md` | Single active task: objective, why, scope, criteria, immediate action | Dynamic | Execution focus |
+| `ai/PLAN.md` | Current phase, milestones, near-term & long-term roadmap | Dynamic | Directional guidance |
+| `ai/DECISIONS.md` | ADR logs: context, decision, reason, alternatives, confirmation source | Long-lived | Authoritative policy |
+| `ai/ISSUES.md` | Issue tracking: ID, status, description, impact, workaround | Dynamic | Fact log |
+| `ai/sessions/` | Structured session records (`SESSION-YYYY-MM-DD-NNN.md`) | Append-only | Audit evidence |
+| `ai/proposals/` | Protocol enhancement suggestions and RFC proposals | Append-only | Proposal record |
+
+### 3.1 Originals, Project Instances, and General Improvement Flow
+
+- **Originals**: Root `PROJECT_CONTEXT.md` / `PROJECT_CONTEXT_ZH.md`. Generic templates containing no private project state or temporary IDs.
+- **Project Instance**: When a project requires customizations, copy the full original to `ai/PROJECT_CONTEXT.md` to evolve locally. Projects without customizations use the root original directly.
+- **Bilingual Alignment**: Rules in Chinese and English must remain identical; discrepancies must be resolved by synchronization.
+- **General Improvement Flow**: If a project instance produces cross-project protocol enhancements, do not overwrite originals directly. Generate root candidate files (`PROJECT_CONTEXT.optimized-<id>.md`, `PROJECT_CONTEXT_ZH.optimized-<id>.md` and patch note `PCMP-PATCH-<id>.md`). Candidates take effect only upon human confirmation.
 
 ---
 
-## 3. Schema Specifications
+## 4. File Schema Specifications
 
-### 3.1 `STATE.md` (State Snapshot)
-Must remain concise for instant agent ingestion:
-* **Last Updated**: Date
-* **Overall Status**: Current phase status
-* **Completed**: Completed key items
-* **In Progress**: Active work items
-* **Blocked**: Blockers
-* **Current Risks & Focus**: Active risks and current focus
-* **Immediate Next Action**: Exact next step
+### 4.1 Frontmatter (Dynamic Files)
+All dynamically updated files (`STATE.md`, `TASK.md`, etc.) must include a standard Frontmatter:
+```yaml
+---
+pcmp_version: "2.1"
+revision: 1
+updated: 2026-10-19
+---
+```
+> **Rule**: Read `revision` before writing; increment `revision + 1` upon meaningful changes. Merge on top of newer versions; never overwrite silently.
 
-### 3.2 `TASK.md` (Active Task)
-Tracks only the **single currently active task**:
-* **Current Task & Objective**: Task title and main goal
-* **Why & Scope**: Context, included / excluded scope
-* **Acceptance Criteria**: Verifiable criteria
-* **Current Progress & Blocker**: Progress and blockers
-* **Immediate Next Action**: Immediate next step
-
-### 3.3 `DECISIONS.md` (Architecture Decision Records - ADR)
-Mandatory for changes affecting architecture, APIs, dependencies, data models, or security boundaries:
+### 4.2 Architecture Decision Records (ADR — `DECISIONS.md`)
 ```markdown
 ## DEC-NNN — Decision Title
 Date: YYYY-MM-DD | Status: Accepted / Proposed / Deprecated / Superseded
+- Confirmation Source: <Who confirmed, when, with session/approval link> (Missing = always Proposed)
 - Context: Current situation and problem
-- Decision: Selected solution
+- Decision: Chosen technical or architectural solution
 - Reason: Why this solution was chosen
-- Alternatives: Options evaluated and why they were rejected
-- Consequences: Positive outcomes, constraints, and trade-offs
+- Alternatives: Evaluated alternatives and reasons for rejection
+- Consequences: Positive outcomes, trade-offs, and constraints
 ```
-> **Rule**: Never silently reverse accepted decisions; propose a superseding decision instead.
+> **Rule**: Silently reversing accepted decisions is prohibited; new decisions must explicitly reference and supersede previous records.
 
-### 3.4 `sessions/SESSION-YYYY-MM-DD-NNN.md` (Session Record)
-Created upon completing each meaningful coding session:
-```markdown
-# Session YYYY-MM-DD-NNN
-- Metadata: Date / Agent / Task / Status
-- Goal & Why
-- What: Actual code/config changes made
-- Result: Verification results & new state
-- Issues & Decisions
-- Next: Immediate recommended follow-up
-```
+### 4.3 `STATE.md` / `TASK.md` / Session Records
+- **`STATE.md`**: Kept concise for instant ingestion: `Last Updated` / `Overall Status` / `Completed` / `In Progress` / `Blocked` / `Current Risks & Focus` / `Immediate Next Action`.
+- **`TASK.md`**: **Tracks only the single currently active task**: `Current Task & Objective` / `Why & Scope` / `Acceptance Criteria` / `Current Progress & Blocker` / `Immediate Next Action`.
+- **`sessions/SESSION-YYYY-MM-DD-NNN.md`**: Metadata (date/agent/task/status) / `Goal & Why` / `What` (actual code/config changes) / `Result` (tests/state) / `Issues & Decisions` / `Next`.
+
+### 4.4 Information Layering Labels
+All `ai/` records should use explicit status tags:
+- `[fact]` (`[事实]`): Objective, verified code, config, or test behavior.
+- `[assumption]` (`[假设]`): Deduced assumption awaiting empirical proof.
+- `[proposal]` (`[提议]`): Proposal by AI or member, not yet accepted.
+- `[accepted]` (`[已确认]`): Explicitly approved by user or tech lead.
+- `[open]` (`[未决]`): Unresolved question, blocker, or open issue.
 
 ---
 
-## 4. Workflow & Priority
+## 5. Standard Workflows
 
-### 4.1 Takeover Procedure
+### 5.1 AI Takeover Flow
 ```text
-1. Read PROJECT_CONTEXT.md / ZH
+1. Determine effective protocol: Use ai/ instance if present, else root original
    ↓
-2. Read ai/STATE.md & ai/TASK.md (Grasp status & active task)
+2. Mandatory reading: Read ai/PROJECT.md (system mission, goals & constraints)
    ↓
-3. Read ai/ARCHITECTURE.md / PLAN.md / DECISIONS.md as needed
+3. Grasp status & task: ai/STATE.md + ai/TASK.md (current location & focus)
    ↓
-4. Inspect relevant source code and tests
+4. Retrieve decisions: Search ai/DECISIONS.md for relevant Accepted decisions
    ↓
-5. Identify Immediate Next Action and proceed
+5. Supplement as needed: Inspect ARCHITECTURE.md / PLAN.md; enter sessions/ only for evidence
+   ↓
+6. Inspect deliverables: Verify source code & tests → Determine Immediate Next Action → Execute
 ```
+> **Self-Correction**: Missing mandatory files triggers the initialization flow; never guess project state.
 
-### 4.2 Session Completion Workflow
+### 5.2 Session Completion Flow
 ```text
-1. Validate code & run tests
+1. Verify deliverables: Run tests & static analysis to satisfy acceptance criteria
    ↓
-2. Review changed files (git status / diff)
+2. Review changes: Run git status / diff to ensure bounded scope
    ↓
-3. Write ai/sessions/ session record
+3. Record session: Write ai/sessions/SESSION-YYYY-MM-DD-NNN.md
    ↓
-4. Update ai/STATE.md & ai/TASK.md
+4. Update state: Refresh ai/STATE.md & ai/TASK.md (increment revision & date)
    ↓
-5. Update PLAN.md / DECISIONS.md / ISSUES.md as appropriate
+5. Register decisions: Log any architectural change in DECISIONS.md (unconfirmed = Proposed)
    ↓
-6. Update Immediate Next Action
+6. (Optional) Refresh index: Update SQLite cache if index is active
+   ↓
+7. Persist & commit: Execute git commit or persistence step
 ```
 
-### 4.3 Conflict Resolution Priority
-```text
-Actual Code & Tests (Highest) > STATE.md > TASK.md > DECISIONS.md > PLAN.md > Historical Sessions (Lowest)
-```
-> Discrepancies between code and docs must be treated as **context consistency issues** and corrected immediately.
+### 5.3 Conflict Resolution
+Following Principle 2: Merge on newer revision; verify evidence chains for code-doc discrepancies. Pause and request human clarification when unresolvable.
 
 ---
 
-## 5. Standard Human Prompts
+## 6. SQLite Derivative Index Layer (Optional)
 
-Human developers can copy and use the following standard commands across any AI coding agents:
-
-### 5.1 Project Context Initialization
-> `Read PROJECT_CONTEXT.md, initialize the ai/ project context management system, and assess the current project state.`
-
-### 5.2 Takeover & Continue (New AI / New Session)
-> `Read PROJECT_CONTEXT.md and take over the project. Review ai/STATE.md and ai/TASK.md, then continue the active task.`
-
-### 5.3 Read-Only Status & Consistency Assessment
-> `Read PROJECT_CONTEXT.md and assess the current project status and architecture consistency. Do not modify any code.`
-
-### 5.4 Architecture Planning & Decision Proposal
-> `Read PROJECT_CONTEXT.md, review ai/PLAN.md, and propose the next development steps or architectural decisions. Do not modify code.`
-
-### 5.5 Issue Diagnosis & Tracking
-> `Read PROJECT_CONTEXT.md, diagnose this issue, record it in ai/ISSUES.md, and propose a fix.`
-
-### 5.6 Finalize Coding Session
-> `Finalize the current session per PCMP: verify code and tests, record the session under ai/sessions/, and update ai/STATE.md and ai/TASK.md.`
+1. **Role**: Rebuildable full-text search and structured query layer (`ai/.cache/index.sqlite`).
+2. **Derivative Nature**: Markdown is the sole authority. Deleting the database has zero negative impact on human/AI ability to take over.
+3. **Staleness Check**: Uses file path + content hash rather than timestamps alone.
+4. **Git Policy**: Projects enabling the index MUST include in `.gitignore`:
+   ```gitignore
+   ai/.cache/
+   ```
 
 ---
 
-## 6. Governance & Human Approval Boundary
+## 7. Development Extensions (Optional)
 
-### 6.1 AI Permissions
-* **Allowed**: Update `ai/` state, task, plan, sessions, issues, and accepted decisions; compress old history.
-* **Prohibited**: Scope creep without approval; modifying this protocol without human sign-off.
-
-### 6.2 Human Approval Required
-* Changing core project goals and product identity.
-* Changing fundamental architectural principles or reversing major accepted decisions.
-* Modifying protocol rules and schema definitions.
-* Removing core security constraints and safety guardrails.
+For large software engineering workflows (not part of the minimal universal core):
+- **Phase Technical Documentation**: Maintain 4+1 views (`4_plus_1_view.md`) and requirements-features-methods traceability matrices (`requirements_traceability.md`) under `docs/S{N}-{short_name}/`.
+- **Dual-Track Directory Management**:
+  - Phase standalone projects (`phases/S{N}-{short_name}/`): Self-contained code scoped strictly to milestone goals.
+  - Continuous evolution project (`continuous/`): Mainline codebase integrating verified phase code.
 
 ---
 
-## 7. Compliance Checklist
+## 8. Recovery Test Acceptance Criteria
 
-- [ ] **Before Session**: Read protocol, identify active task in `STATE.md`/`TASK.md`, inspect relevant code.
-- [ ] **During Session**: Stay within scope; document architectural changes in `DECISIONS.md`.
-- [ ] **After Session**: Implementation verified, `SESSION` record created, `STATE.md` and `TASK.md` updated with next action.
+A new AI agent with no prior conversational memory following §5.1 must accurately answer:
+1. **What are the core project goals and acceptance criteria?**
+2. **What are the non-negotiable hard constraints and safety boundaries?**
+3. **What Accepted architectural decisions exist, why, and confirmed by whom?**
+4. **What is the current development progress and are there any blockers?**
+5. **What is the exact Immediate Next Action?**
+
+> Inability to answer any item reveals missing context in `STATE` / `TASK` / `DECISIONS`, which must be filled immediately.
+
+---
+
+## 9. Governance & Approval Boundaries
+
+### 9.1 AI Permissions
+- **Allowed**: Update `ai/` state, task, plan, sessions, issues; compress old history; propose ADRs (`[proposal]`).
+- **Prohibited**: Scope creep; silently overturning decisions; modifying this protocol without human approval.
+
+### 9.2 Human Approval Required
+- Modifying core identity, project goals, and product scope.
+- Reversing key architectural decisions or Accepted ADRs.
+- Changing security policies, permission boundaries, or privacy rules.
+- Upgrading or changing protocol originals.
+
+---
+
+## 10. Standard Human Prompts
+
+Human developers can copy these standardized prompts across any AI coding agent:
+
+> [!TIP]
+> **Initialize Context**  
+> `Read PROJECT_CONTEXT.md (or Chinese PROJECT_CONTEXT_ZH.md), initialize this project's ai/ context management system, and assess the current project state.`
+
+> [!TIP]
+> **Takeover & Continue**  
+> `Read PROJECT_CONTEXT.md and take over the project. Follow the mandatory reading sequence: ai/PROJECT.md, ai/STATE.md, and ai/TASK.md. List open questions, then proceed with the active task.`
+
+> [!TIP]
+> **Read-Only Assessment**  
+> `Read PROJECT_CONTEXT.md and assess the current project status and architectural consistency. Check for documentation-code drift. Do not modify any code.`
+
+> [!TIP]
+> **Planning & Decision Proposal**  
+> `Read PROJECT_CONTEXT.md, review ai/PLAN.md, and propose the next development roadmap or architectural decisions. Do not modify code.`
+
+> [!TIP]
+> **Finalize Session**  
+> `Finalize this session per PCMP: verify deliverables and tests, record the session under ai/sessions/, update ai/STATE.md and ai/TASK.md, and log any new decision in ai/DECISIONS.md (unconfirmed = Proposed).`
+
+---
+
+## 11. Checklist & Recommended Best Practices
+
+- [ ] **Pre-Session**: Read effective protocol; grasp system boundaries via `PROJECT.md`, `STATE.md`, and `TASK.md`.
+- [ ] **Review Material Authorization (Recommended Practice)**: **Materials for review, audit, or stylistic checks must be explicitly specified or authorized by humans**; AI must not scan the full workspace or expand review scope without permission.
+- [ ] **Scope Control**: Stay focused strictly within task scope; propose ADRs for architectural deviations.
+- [ ] **Decision Validity**: All Accepted ADRs include a verified `- Confirmation Source`.
+- [ ] **Post-Session**: Tests passed, session logged under `sessions/`, `STATE.md` and `TASK.md` updated with incremented `revision`.

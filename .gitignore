@@ -1,0 +1,14 @@
+# Node / NPM
+node_modules/
+package.json
+package-lock.json
+
+# Tooling & Agent environments
+.claude/
+
+# PCMP derivative cache
+ai/.cache/
+
+# System / Editor
+.DS_Store
+Thumbs.db
