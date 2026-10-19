@@ -25,3 +25,10 @@
 - 文档的主语必须写名称，不得写“我们、你们”；界面文字不得使用复数人称代词和第三人称代词。
 - 写给 agent 的规则，强度必须只用“必须、不得、宜、不宜、可、不必、能、不能”。
 <!-- stc:end -->
+
+## 工程上下文管理：PCMP（Project Context Management Protocol）
+
+本工程遵循 PCMP v2.1 规范管理上下文与状态。完整技能定义见 `skills/pcmp/SKILL.md`。
+- **接管任务时**：按必读顺序查阅 `ai/PROJECT.md`（宗旨与硬约束）➔ `ai/STATE.md` ➔ `ai/TASK.md`；
+- **收尾沉淀时**：验证测试、审查变更、在 `ai/sessions/` 沉淀记录、刷新 `STATE.md` 与 `TASK.md`（revision +1），并运行 `python3 scripts/pcmp_index.py --update`；
+- **支持快捷命令**：`/pcmp init`、`/pcmp takeover`、`/pcmp finalize`、`/pcmp adr`、`/pcmp assess`、`/pcmp index`。

@@ -1,7 +1,7 @@
 ---
 pcmp_version: "2.1"
-revision: 2
-updated: 2026-10-19
+revision: 3
+updated: 2026-10-20
 ---
 
 # 架构与技术决策记录 (DECISIONS.md)
@@ -38,3 +38,14 @@ updated: 2026-10-19
 - 理由 (Reason): 保持当前仓库的轻量与自洽，消除外部使用者的概念困惑，同时避免过早拆分多仓库带来的维护与发版成本。
 - 备选方案 (Alternatives): 立即拆分出独立的 `pcmp-cli` 仓库（方案 2）。延后理由：当前处于协议演进初期，单脚本参考实现已能满足需求，过早分库增加维护负担。
 - 影响 (Consequences): README.md 明确突出“单文档开箱自举”指南，清晰界定脚本为非必需的可选加速工具。
+
+---
+
+## DEC-004 — 推出官方 PCMP Skill 智能体技能标准
+日期: 2026-10-20 | 状态: Accepted
+- 确认来源: 用户指示“可以做成skill吗？这样可以把指令做成命令来用；好，建议动作也一起做”
+- 背景 (Context): 人类开发者在不同对话中频繁手动复制长篇提示词（初始化、接管、收尾、ADR登记等）操作繁琐；主流智能体环境（Claude Code、Antigravity 等）支持 Skill 规范。
+- 决策 (Decision): 推出官方 PCMP Skill，在 `skills/pcmp/` 中建立通用技能定义 `SKILL.md` 并内嵌索引脚本，提供 `/pcmp init`、`/pcmp takeover`、`/pcmp finalize`、`/pcmp adr`、`/pcmp assess`、`/pcmp index` 等斜杠命令；并部署至本地 `.claude/skills/pcmp` 与 `.agents/skills/pcmp`。
+- 理由 (Reason): 将协议核心工作流封装为自动化动作，极大提升开发者日常操作效率，降低协议执行门槛，同时完全兼容原有的纯单文档使用方式。
+- 备选方案 (Alternatives): 仅提供纯文本 Prompt 模板。放弃原因：长 Prompt 维护成本高，易遗漏收尾或更新步骤。
+- 影响 (Consequences): 仓库增加 `skills/pcmp/` 目录；`AGENTS.md` 引用该 Skill 指令；README.md 增补 Skill 命令对照表。

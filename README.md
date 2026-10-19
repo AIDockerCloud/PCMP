@@ -117,7 +117,23 @@
 
 ## 🛠️ 配套与推荐工具 (Ecosystem & Tools)
 
-### 1. 官方可选参考工具：SQLite 派生索引脚本 (`pcmp_index.py`)
+### 1. 官方智能体技能：PCMP Skill (`skills/pcmp/`)
+
+为各大 AI 编码助手（Claude Code、Antigravity、Cursor 等）提供开箱即用的**快捷斜杠命令**，无需再手动复制冗长的标准提示词：
+
+| 快捷命令 | 对应工作流 | 自动化执行内容 |
+| :--- | :--- | :--- |
+| `/pcmp init` | 上下文体系初始化 | 检查项目现状，全自动建立 `ai/` 规范目录与标准 Schema 文件。 |
+| `/pcmp takeover` | 跨会话 / 换新 AI 接管 | 严格按规范阅读 `PROJECT.md` ➔ `STATE.md` ➔ `TASK.md` 并向开发者汇报当前焦点。 |
+| `/pcmp finalize` | 会话收尾与沉淀 | 运行测试、审查 diff、沉淀 `ai/sessions/`、递增 revision、登记 ADR 并刷新索引。 |
+| `/pcmp adr <标题>` | 登记架构决策 | 按标准模板向 `ai/DECISIONS.md` 追加决策（缺失确认来源标 Proposed）。 |
+| `/pcmp assess` | 状态一致性诊断 | 只读分析源代码物理实现与架构文档脱节情况，输出诊断报告（不改代码）。 |
+| `/pcmp index` | 派生索引查询 | 结构化查询决策状态、检索分层标签或通过 FTS5 进行全文搜索。 |
+
+**引入方式**：
+将本仓库的 `skills/pcmp/` 目录复制到目标项目的 `.claude/skills/pcmp`（适用于 Claude Code）或 `.agents/skills/pcmp`（适用于 Antigravity）即可自动生效。
+
+### 2. 官方可选参考工具：SQLite 派生索引脚本 (`pcmp_index.py`)
 
 当项目长期演进、历史会话与决策较多时，可按需使用本仓库提供的单脚本 SQLite 索引加速层（基于 Python 3 原生标准库，**零外部 pip 依赖**）：
 
@@ -135,7 +151,7 @@ python3 scripts/pcmp_index.py --query-tags --tag-filter proposal
 python3 scripts/pcmp_index.py --search "关键词"
 ```
 
-### 2. 推荐搭配规范：STC (Simplified Technical Chinese)
+### 3. 推荐搭配规范：STC (Simplified Technical Chinese)
 
 PCMP 推荐搭配 [STC (简体技术中文规范)](https://github.com/daimonia-ai/STC-Simplified-Technical-Chinese) 作为中文工程文档与人机对话的规范工具。
 
