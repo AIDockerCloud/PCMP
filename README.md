@@ -130,7 +130,7 @@
 | :--- | :--- | :--- |
 | `/pcmp init [lite\|full]` | 上下文体系初始化 | 检查项目现状，按 Lite（4 件套）或 Full（全功能）建立 `ai/` 规范目录。 |
 | `/pcmp takeover` | 跨会话 / 换新 AI 接管 | 严格按规范阅读 `PROJECT.md` ➔ `STATE.md` ➔ `TASK.md` 并向开发者汇报当前焦点。 |
-| `/pcmp check` | 自动化合规健全性校验 | 自动校验 Frontmatter 结构、revision、Accepted ADR 确认来源、中英双语版本对齐。 |
+| `/pcmp check` | 自动化合规健全性校验 | 自动校验 Frontmatter、ADR 字段完整性、双语版本与章节骨架对齐、脚本副本一致性。 |
 | `/pcmp finalize` | 会话收尾与沉淀 | 运行测试与合规检查、审查 diff、沉淀会话、递增 revision、登记 ADR 并刷新索引。 |
 | `/pcmp adr <标题>` | 登记架构决策 | 按标准模板向 `ai/DECISIONS.md` 追加决策（带 Supersedes 与复审触发条件）。 |
 | `/pcmp assess` | 状态一致性诊断 | 只读分析源代码物理实现与架构文档脱节情况，输出诊断报告（不改代码）。 |
@@ -147,7 +147,7 @@
 # 可选：下载单脚本到项目中（不下载完全不影响 PCMP 核心规范运作）
 curl -fsSL https://raw.githubusercontent.com/AIDockerCloud/PCMP/main/scripts/pcmp_index.py -o scripts/pcmp_index.py
 
-# 自动化合规检查 (强校验 Frontmatter、revision、Accepted ADR 确认来源、双语版本对齐)
+# 自动化合规检查 (强校验 Frontmatter、revision、ADR 完整性、双语版本与章节骨架对齐、脚本副本一致性)
 python3 scripts/pcmp_index.py --check
 
 # 运行自动化测试套件

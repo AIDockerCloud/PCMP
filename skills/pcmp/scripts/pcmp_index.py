@@ -370,10 +370,12 @@ class PCMPIndex:
         """
         Automated compliance and sanity check for PCMP repository:
         1. Frontmatter check on dynamic files (ai/STATE.md, ai/TASK.md).
-        2. ADR check on ai/DECISIONS.md: Accepted decisions MUST have confirmation_source.
-        3. Supersedes check: verify cited decision exists.
+        2. TASK schema check: Constraints & Non-Goals and Relevant Files are mandatory.
+        3. ADR check on ai/DECISIONS.md: Accepted decisions MUST have confirmation_source,
+           supersedes, superseded_by, and review_trigger.
         4. Freshness check: warn if STATE.md updated_at is older than 14 days.
-        5. Bilingual check: ensure PROJECT_CONTEXT_ZH.md and PROJECT_CONTEXT.md versions match.
+        5. Bilingual check: ensure versions and section skeleton (## N.) match between ZH and EN.
+        6. Script mirror check: ensure scripts/pcmp_index.py and skills/pcmp/scripts/pcmp_index.py are identical.
         """
         errors = []
         warnings = []

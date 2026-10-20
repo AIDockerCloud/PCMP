@@ -148,6 +148,14 @@ Only simple description without constraints or files.
             errors, _ = tmp_indexer.check_compliance()
             self.assertTrue(any("Script mirror inconsistency" in e for e in errors))
 
+    def test_examples_lite_compliance(self):
+        """Verify that examples/lite boilerplate passes compliance check out of the box."""
+        lite_path = self.repo_root / "examples/lite"
+        lite_indexer = PCMPIndex(lite_path)
+        errors, warnings = lite_indexer.check_compliance()
+        self.assertEqual(errors, [], f"examples/lite compliance check failed with errors: {errors}")
+        self.assertEqual(warnings, [], f"examples/lite compliance check produced warnings: {warnings}")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -57,10 +57,11 @@ description: >
   ```
   检查项包括：
   1. 动态文件 (`STATE.md`, `TASK.md`) 的 Frontmatter、`revision`（必须为正整数）与日期格式及新鲜度；
-  2. `TASK.md` 是否包含推荐的 `Constraints & Non-Goals` 与 `Relevant Files`；
-  3. `DECISIONS.md` 中所有标记为 `Accepted` 的决策是否均具备非空的有效 `- 确认来源`；
+  2. `TASK.md` 是否包含必选的 `Constraints & Non-Goals` 与 `Relevant Files`；
+  3. `DECISIONS.md` 中所有标记为 `Accepted` 的决策是否均具备非空的有效确认来源、`Supersedes`、`Superseded-by` 与 `复审触发条件`；
   4. `Supersedes` 字段引用的前序决策是否存在；
-  5. 根目录下中英双语协议版本是否严格对齐。
+  5. 根目录下中英双语协议版本与章节序号骨架是否严格对齐；
+  6. 根目录与技能目录下的 `pcmp_index.py` 脚本镜像哈希（SHA-256）是否完全一致。
 
 ### 4. `/pcmp finalize` (会话收尾与上下文沉淀)
 - **目标**：完成一次实质性开发后，沉淀审计记录并更新状态快照。
