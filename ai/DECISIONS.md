@@ -1,6 +1,6 @@
 ---
 pcmp_version: "2.2"
-revision: 4
+revision: 5
 updated: 2026-10-20
 ---
 
@@ -9,6 +9,9 @@ updated: 2026-10-20
 ## DEC-001 — PCMP 协议规范确立与开源发布
 日期: 2026-10-19 | 状态: Accepted
 - 确认来源: 用户在会话中授权确认发布 V1.0 与 V2.1
+- Supersedes: 无
+- Superseded-by: 无
+- 复审触发条件 (Review Trigger): 当协议核心架构发生重大范式变更或决定拆分独立多生态体系时
 - 背景 (Context): AI 辅助编程环境下，普遍存在会话易中断、上下文失忆、无法长期追溯设计意图等工程痛点。
 - 决策 (Decision): 确立并发布 PCMP（项目上下文管理协议），以中英双语原版规范形式开源发布，核心状态维护于 `ai/` 目录。
 - 理由 (Reason): Markdown + 文件系统具备极致的通用性、透明性与平台无关性，不依赖任何特定模型或专有 IDE。
@@ -20,6 +23,9 @@ updated: 2026-10-20
 ## DEC-002 — 采用 Python 3 原生标准库实现 SQLite 派生索引层 (方案 A)
 日期: 2026-10-19 | 状态: Accepted
 - 确认来源: 用户明确指示“按方案A去实现”
+- Supersedes: 无
+- Superseded-by: 无
+- 复审触发条件 (Review Trigger): 当生态需要支持跨语言编译型单二进制或 Python 标准库无法满足检索性能需求时
 - 背景 (Context): 随着项目规模和会话增多，从纯 Markdown 文件中进行结构化筛选（如过滤所有 Proposed 决策、查找特定标签、全文检索）效率较低，需要一个毫秒级的本地加速索引层。
 - 决策 (Decision): 采用方案 A，使用 Python 3 原生标准库（`sqlite3` 包含 FTS5、`hashlib`、`pathlib`）实现单文件轻量 CLI 工具 `scripts/pcmp_index.py`。
 - 理由 (Reason): Python 3 在现代开发环境中近乎 100% 预装；其标准库开箱即用，无需执行 `pip install` 安装任何外部依赖，极大降低了用户和智能体的使用门槛。
@@ -33,6 +39,9 @@ updated: 2026-10-20
 ## DEC-003 — 确立单仓库分层架构（方案 1）与单文档开箱自举定位
 日期: 2026-10-19 | 状态: Accepted
 - 确认来源: 用户明确指示“使用方案1，如果后续项目变大或者需要考虑和兼容的工具变多时再考虑方案2”
+- Supersedes: 无
+- Superseded-by: 无
+- 复审触发条件 (Review Trigger): 当工具矩阵扩大、多语言客户端涌现且需要独立发版治理时复审分库方案
 - 背景 (Context): 引入 `scripts/pcmp_index.py` 与 `ai/` 自举目录后，需要明确 PCMP 是否依然坚持“单文档初始化”的核心初心，避免外部使用者误以为使用 PCMP 必须引入一整套脚本或环境。
 - 决策 (Decision): 采纳方案 1，坚持“单文档驱动一切”的协议本质。在单仓库内建立明确的三层划分：① 核心协议规范（单文档自足，外部只需复制）；② 官方可选工具（scripts 参考实现，按需自取）；③ 本仓库自举上下文（ai/ 目录范例）。后续待生态扩大、工具矩阵增加时再独立分立 `pcmp-cli` 仓库（方案 2）。
 - 理由 (Reason): 保持当前仓库的轻量与自洽，消除外部使用者的概念困惑，同时避免过早拆分多仓库带来的维护与发版成本。
@@ -44,6 +53,9 @@ updated: 2026-10-20
 ## DEC-004 — 推出官方 PCMP Skill 智能体技能标准
 日期: 2026-10-20 | 状态: Accepted
 - 确认来源: 用户指示“可以做成skill吗？这样可以把指令做成命令来用；好，建议动作也一起做”
+- Supersedes: 无
+- Superseded-by: 无
+- 复审触发条件 (Review Trigger): 当主流智能体生态标准（如 MCP、统一 Skill 规范）发生重大标准重构时
 - 背景 (Context): 人类开发者在不同对话中频繁手动复制长篇提示词（初始化、接管、收尾、ADR登记等）操作繁琐；主流智能体环境（Claude Code、Antigravity 等）支持 Skill 规范。
 - 决策 (Decision): 推出官方 PCMP Skill，在 `skills/pcmp/` 中建立通用技能定义 `SKILL.md` 并内嵌索引脚本，提供 `/pcmp init`、`/pcmp takeover`、`/pcmp finalize`、`/pcmp adr`、`/pcmp assess`、`/pcmp index` 等斜杠命令；并部署至本地 `.claude/skills/pcmp` 与 `.agents/skills/pcmp`。
 - 理由 (Reason): 将协议核心工作流封装为自动化动作，极大提升开发者日常操作效率，降低协议执行门槛，同时完全兼容原有的纯单文档使用方式。
@@ -68,3 +80,22 @@ updated: 2026-10-20
 - 理由 (Reason): 保持 PCMP 纯 Markdown 权威初心的同时，提供适应小项目的极低负担落地路径，并通过机器检验确保协议合规与双语一致。
 - 备选方案 (Alternatives): 继续保留单一套件要求所有项目写满 7 个文档与会话记录。放弃原因：加剧使用者的抵抗心理与治理通胀。
 - 影响 (Consequences): 协议升级至 v2.2；测试与合规检查纳入收尾标准动作；提升智能体与开发者的协同体验。
+
+---
+
+## DEC-006 — 历史 ADR 字段补齐、--check 强硬化、CI 闭环与 Lite 样板建立
+日期: 2026-10-20 | 状态: Accepted
+- 确认来源: 用户明确指示“请完成”执行 Alice 二次评价的 5 项深度治理建议
+- Supersedes: 无
+- Superseded-by: 无
+- 复审触发条件 (Review Trigger): 当 CI 校验规则需支持更多语言环境，或 Lite 样板需要扩展针对特定框架的模板时复审
+- 背景 (Context): 协议 v2.2 确立了新规范，但历史 ADR 未回填新字段；--check 缺乏对脚本副本一致性与双语标题对称性的硬约束；缺少 GitHub Actions 导致质量靠自觉；Lite 缺乏直接可用的开箱样例工程。
+- 决策 (Decision):
+  1. 全量回填 DEC-001 至 DEC-004 的 Supersedes、Superseded-by 与复审触发条件；
+  2. 强化 scripts/pcmp_index.py --check：增加脚本双副本 SHA-256 一致性校验、双语二级标题结构对称性校验，并将 ADR 字段完整性与 TASK 关键小节缺失直接设为 error；
+  3. 接入 GitHub Actions CI 工作流（.github/workflows/ci.yml）；
+  4. 创建 examples/lite/ 极简 4 件套可运行样板工程；
+  5. 在 AGENTS.md 中补齐 Python 脚本编码约束（零 pip 依赖、PEP 8、单文件自足）。
+- 理由 (Reason): 将治理从“框架设计完成”推进到“深度自动化落地与开箱体验闭环”，消除荣誉制依赖与重复真源漂移风险。
+- 备选方案 (Alternatives): 保持 warning 提示与手动跑测试。放弃原因：容易遗忘，无法建立机器级别的硬质防线。
+- 影响 (Consequences): 每次 push/PR 均强制通过完整测试与合规检查；外部使用者可直接复制 examples/lite/ 立即开箱。

@@ -232,7 +232,7 @@ class PCMPIndex:
                     supersedes_val = line_s.split(":", 1)[1].strip()
                 elif line_s.startswith("- Superseded-by:") or line_s.startswith("- 被取代:"):
                     superseded_by_val = line_s.split(":", 1)[1].strip()
-                elif line_s.startswith("- 复审触发条件:") or line_s.startswith("- Review Trigger:"):
+                elif line_s.startswith("- 复审触发条件") or line_s.startswith("- Review Trigger"):
                     review_trigger_val = line_s.split(":", 1)[1].strip()
                 elif line_s.startswith("- 背景") or line_s.startswith("- Context:"):
                     context_val = line_s.split(":", 1)[1].strip()
@@ -414,9 +414,9 @@ class PCMPIndex:
         if task_p.exists():
             task_txt = task_p.read_text(encoding="utf-8")
             if not any(k in task_txt for k in ["Constraints", "Non-Goals", "约束", "非目标"]):
-                warnings.append("[ai/TASK.md] Missing recommended 'Constraints & Non-Goals (约束与非目标)' section")
+                errors.append("[ai/TASK.md] Missing mandatory 'Constraints & Non-Goals (约束与非目标)' section")
             if not any(k in task_txt for k in ["Relevant Files", "关联文件", "关键文件"]):
-                warnings.append("[ai/TASK.md] Missing recommended 'Relevant Files (关联关键文件)' section")
+                errors.append("[ai/TASK.md] Missing mandatory 'Relevant Files (关联关键文件)' section")
 
         # 2. ADR check
         dec_file = self.root_dir / "ai/DECISIONS.md"
@@ -435,8 +435,10 @@ class PCMPIndex:
                 block = content[start:end].strip()
 
                 status_val = "Proposed"
-                conf_source = ""
-                supersedes_val = ""
+                conf_source = None
+                supersedes_val = None
+                superseded_by_val = None
+                review_trigger_val = None
 
                 for line in block.splitlines():
                     ls = line.strip()
@@ -447,27 +449,68 @@ class PCMPIndex:
                         conf_source = ls.split(":", 1)[1].strip()
                     elif ls.startswith("- Supersedes:") or ls.startswith("- 取代决策:"):
                         supersedes_val = ls.split(":", 1)[1].strip()
+                    elif ls.startswith("- Superseded-by:") or ls.startswith("- 被取代:"):
+                        superseded_by_val = ls.split(":", 1)[1].strip()
+                    elif ls.startswith("- 复审触发条件") or ls.startswith("- Review Trigger"):
+                        review_trigger_val = ls.split(":", 1)[1].strip()
 
-                dec_entries.append((dec_id, status_val, conf_source, supersedes_val))
+                dec_entries.append((dec_id, status_val, conf_source, supersedes_val, superseded_by_val, review_trigger_val))
 
-            for dec_id, status_val, conf_source, supersedes_val in dec_entries:
+            for dec_id, status_val, conf_source, supersedes_val, superseded_by_val, review_trigger_val in dec_entries:
                 if status_val.lower() == "accepted":
                     if not conf_source or conf_source.lower() in ["none", "待确认", "无", "todo"]:
                         errors.append(f"[DECISIONS.md] {dec_id} is marked 'Accepted' but lacks valid '确认来源 (Confirmation Source)'")
+                    if supersedes_val is None:
+                        errors.append(f"[DECISIONS.md] {dec_id} is marked 'Accepted' but lacks 'Supersedes' field")
+                    if superseded_by_val is None:
+                        errors.append(f"[DECISIONS.md] {dec_id} is marked 'Accepted' but lacks 'Superseded-by' field")
+                    if not review_trigger_val or review_trigger_val.lower() in ["none", "待确认", "无", "todo"]:
+                        errors.append(f"[DECISIONS.md] {dec_id} is marked 'Accepted' but lacks valid '复审触发条件 (Review Trigger)'")
+
                 if supersedes_val and supersedes_val.strip().lower() not in ["无", "none", "n/a", "-", "nil"]:
                     if supersedes_val not in all_dec_ids:
-                        warnings.append(f"[DECISIONS.md] {dec_id} cites non-existent Supersedes target: '{supersedes_val}'")
+                        errors.append(f"[DECISIONS.md] {dec_id} cites non-existent Supersedes target: '{supersedes_val}'")
 
-        # 3. Bilingual version parity check
+        # 3. Bilingual version & structure parity check
         zh_path = self.root_dir / "PROJECT_CONTEXT_ZH.md"
         en_path = self.root_dir / "PROJECT_CONTEXT.md"
         if zh_path.exists() and en_path.exists():
-            fm_zh, _ = self.parse_frontmatter(zh_path.read_text(encoding="utf-8"))
-            fm_en, _ = self.parse_frontmatter(en_path.read_text(encoding="utf-8"))
+            zh_raw = zh_path.read_text(encoding="utf-8")
+            en_raw = en_path.read_text(encoding="utf-8")
+            fm_zh, _ = self.parse_frontmatter(zh_raw)
+            fm_en, _ = self.parse_frontmatter(en_raw)
             ver_zh = fm_zh.get("pcmp_version")
             ver_en = fm_en.get("pcmp_version")
             if ver_zh and ver_en and ver_zh != ver_en:
                 errors.append(f"Bilingual version parity mismatch: ZH is {ver_zh}, EN is {ver_en}")
+
+            def extract_sections(text: str) -> list[int]:
+                secs = []
+                in_fence = False
+                for line in text.splitlines():
+                    ls = line.strip()
+                    if ls.startswith("```"):
+                        in_fence = not in_fence
+                        continue
+                    if not in_fence and ls.startswith("## "):
+                        m = re.match(r"^##\s+(\d+)\.", ls)
+                        if m:
+                            secs.append(int(m.group(1)))
+                return secs
+
+            sec_zh = extract_sections(zh_raw)
+            sec_en = extract_sections(en_raw)
+            if sec_zh != sec_en:
+                errors.append(f"Bilingual section symmetry mismatch: ZH sections {sec_zh} != EN sections {sec_en}")
+
+        # 4. Script mirror consistency check
+        root_script = self.root_dir / "scripts/pcmp_index.py"
+        skill_script = self.root_dir / "skills/pcmp/scripts/pcmp_index.py"
+        if root_script.exists() and skill_script.exists():
+            h_root = self.compute_sha256(root_script.read_text(encoding="utf-8"))
+            h_skill = self.compute_sha256(skill_script.read_text(encoding="utf-8"))
+            if h_root != h_skill:
+                errors.append("Script mirror inconsistency: 'scripts/pcmp_index.py' does not match 'skills/pcmp/scripts/pcmp_index.py'")
 
         return errors, warnings
 

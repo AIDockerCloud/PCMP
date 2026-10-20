@@ -25,7 +25,7 @@
 
 为了杜绝在个人或小型项目中产生“治理通胀”，PCMP 原生支持双档位：
 
-* **PCMP Lite（极简 4 件套）**：专为单人、快速原型与维护期项目设计，仅需 4 个文件（`AGENTS.md` + `ai/PROJECT.md` + `ai/STATE.md` 合并活动任务 + `ai/DECISIONS.md`），免建任何复杂规划或会话归档；
+* **PCMP Lite（极简 4 件套）**：专为单人、快速原型与维护期项目设计，仅需 4 个文件（`AGENTS.md` + `ai/PROJECT.md` + `ai/STATE.md` 合并活动任务 + `ai/DECISIONS.md`），免建任何复杂规划或会话归档。开箱可用样例工程见 [examples/lite/](examples/lite/)；
 * **PCMP Full（完整套件）**：面向团队与多阶段长期工程，提供完整的任务单（`TASK.md`）、架构图谱、会话沉淀及自动化校验。
 
 在任何新项目中使用 PCMP，只需简单三步：

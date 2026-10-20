@@ -20,6 +20,9 @@ PCMP (Project Context Management Protocol) 是面向人机协同的通用工程�
 - **全量重建派生索引**：`python3 scripts/pcmp_index.py --rebuild`
 - **检索决策与标签**：`python3 scripts/pcmp_index.py --query-decisions` / `--query-tags`
 
+## 脚本编码规范
+- **Python 派生工具约定**：仅依赖 Python 3 原生标准库，零 pip 外部依赖；保持单文件自足；严格遵循 PEP 8 规范。
+
 ## 红线与禁区 (Hard Boundaries)
 1. **协议原版保护**：严禁未经人类授权直接修改根目录通用协议原版（变更须遵循优化版与补丁回流流程）；
 2. **决策链条完整**：严禁隐式推翻已 Accepted 决策；新方案必须记录 `Supersedes` 并附带确认来源；
