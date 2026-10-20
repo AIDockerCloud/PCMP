@@ -1,6 +1,6 @@
 ---
-pcmp_version: "2.1"
-revision: 3
+pcmp_version: "2.2"
+revision: 4
 updated: 2026-10-20
 ---
 
@@ -49,3 +49,22 @@ updated: 2026-10-20
 - 理由 (Reason): 将协议核心工作流封装为自动化动作，极大提升开发者日常操作效率，降低协议执行门槛，同时完全兼容原有的纯单文档使用方式。
 - 备选方案 (Alternatives): 仅提供纯文本 Prompt 模板。放弃原因：长 Prompt 维护成本高，易遗漏收尾或更新步骤。
 - 影响 (Consequences): 仓库增加 `skills/pcmp/` 目录；`AGENTS.md` 引用该 Skill 指令；README.md 增补 Skill 命令对照表。
+
+---
+
+## DEC-005 — 引入 Lite 档位、强校验机制与 AGENTS.md 瘦身治理
+日期: 2026-10-20 | 状态: Accepted
+- 确认来源: 用户明确指示“可以请立刻执行”确认 5 项治理建议
+- Supersedes: 无
+- Superseded-by: 无
+- 复审触发条件 (Review Trigger): 当 Lite 档位在实践中出现无法满足的状态管理瓶颈，或衍生出更多自动化校验规则时复审
+- 背景 (Context): PCMP 机制在应对个人或小型项目时显现出“治理通胀”倾向；原 AGENTS.md 写作规则占比过大而缺乏关键工程硬事实与边界；缺乏机器级合规与双语一致性自动化校验。
+- 决策 (Decision):
+  1. 确立 PCMP 双档位：Lite（极简 4 件套，活动任务并入 STATE）与 Full（完整治理套件）；
+  2. 重构瘦身 AGENTS.md，精简写作规则并注入 15 行高密度工程硬事实、常用命令与红线禁区；
+  3. 强化 TASK.md 必须包含 Constraints & Non-Goals 与 Relevant Files；
+  4. 强化 ADR 结构，引入 Supersedes、Superseded-by 与复审触发条件；
+  5. 在 scripts/pcmp_index.py 中增加 --check 自动化合规检查并配套完整单元测试。
+- 理由 (Reason): 保持 PCMP 纯 Markdown 权威初心的同时，提供适应小项目的极低负担落地路径，并通过机器检验确保协议合规与双语一致。
+- 备选方案 (Alternatives): 继续保留单一套件要求所有项目写满 7 个文档与会话记录。放弃原因：加剧使用者的抵抗心理与治理通胀。
+- 影响 (Consequences): 协议升级至 v2.2；测试与合规检查纳入收尾标准动作；提升智能体与开发者的协同体验。

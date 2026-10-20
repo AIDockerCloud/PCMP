@@ -2,33 +2,26 @@
 <!-- stc:mode=default -->
 ## 中文写作：STC（Simplified Technical Chinese）
 
-写中文时必须按 STC 写。动笔前先判断在写哪类文字，再用通用规则加对应场景的规则：
-
-- 对话里回复人：for chat
-- 给人读的文档、代码注释、提交说明：for document
-- 网页和应用界面上给用户看的文字：for web dev
-- 写给 agent 执行的规则（系统提示词、AGENTS.md、skill）：for instruction writing
-
-完整规则见 `.claude/skills/stc/SKILL.md`。核心规则：
-
-- 默认表达自然、简短、准确。用完整句子，直接回答或交付结果，删除客套、重复和无关解释。
-- 篇幅必须满足任务。完整文稿、详细解释、必要步骤和不可逆后果必须写完整。
-- 任务回执必须按 for chat 的 C10 分为“做完了”“需要你”“知会”。用户动作必须单独列出；没有事项写“无”，不得编造待办。普通问答和成品正文使用对应结构。
-- 同一个东西必须只用一个叫法；产品名、功能名必须照项目术语表写。
-- 动作必须直接写成动词，不得写“进行、加以”加名词。
-- 程度词和模糊量词必须换成数字或具体事实。原文和上下文里没有的数字不得编造，写成“【待补：…】”。
-- 不得使用营销词、行话、套话和口号句式。
-- Anti-Echo：每句话必须帮助当前读者理解、判断或操作。无关排除、制作说明和自证必须删除；必要的价格、权限、安全边界必须保留。
-- 交付前必须按 skill 完成 Anti-Echo 检查，并逐句复核实际可见文字。未处理的疑点不得作为通过结果。
-- 一句必须只讲一件事；条件宜写在前面。
-- 表示把握程度的“可能”必须保留；没有把握的判断不得写成结论。
-- 文档的主语必须写名称，不得写“我们、你们”；界面文字不得使用复数人称代词和第三人称代词。
-- 写给 agent 的规则，强度必须只用“必须、不得、宜、不宜、可、不必、能、不能”。
+写中文时必须遵循 STC 规范：自然、简短、准确，任务回执必须分为“做完了”“需要你”“知会”。完整规则见 `.claude/skills/stc/SKILL.md`。
 <!-- stc:end -->
 
-## 工程上下文管理：PCMP（Project Context Management Protocol）
+## 项目宗旨与定位
+PCMP (Project Context Management Protocol) 是面向人机协同的通用工程上下文管理协议。核心理念为：**纯 Markdown 权威驱动、单文档开箱自举、派生索引可随意删除重建**。
 
-本工程遵循 PCMP v2.1 规范管理上下文与状态。完整技能定义见 `skills/pcmp/SKILL.md`。
-- **接管任务时**：按必读顺序查阅 `ai/PROJECT.md`（宗旨与硬约束）➔ `ai/STATE.md` ➔ `ai/TASK.md`；
-- **收尾沉淀时**：验证测试、审查变更、在 `ai/sessions/` 沉淀记录、刷新 `STATE.md` 与 `TASK.md`（revision +1），并运行 `python3 scripts/pcmp_index.py --update`；
-- **支持快捷命令**：`/pcmp init`、`/pcmp takeover`、`/pcmp finalize`、`/pcmp adr`、`/pcmp assess`、`/pcmp index`。
+## 关键路径索引
+- 核心协议原版：[PROJECT_CONTEXT_ZH.md](PROJECT_CONTEXT_ZH.md) / [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)
+- 项目状态真源：[ai/PROJECT.md](ai/PROJECT.md)（硬约束）、[ai/STATE.md](ai/STATE.md)（状态）、[ai/TASK.md](ai/TASK.md)（活动任务）、[ai/DECISIONS.md](ai/DECISIONS.md)（ADR）
+- 派生工具与技能：[scripts/pcmp_index.py](scripts/pcmp_index.py)、[skills/pcmp/SKILL.md](skills/pcmp/SKILL.md)
+
+## 常用工程命令
+- **自动化合规检查**：`python3 scripts/pcmp_index.py --check`
+- **运行单元测试套件**：`python3 -m unittest discover tests`
+- **增量刷新派生索引**：`python3 scripts/pcmp_index.py --update`
+- **全量重建派生索引**：`python3 scripts/pcmp_index.py --rebuild`
+- **检索决策与标签**：`python3 scripts/pcmp_index.py --query-decisions` / `--query-tags`
+
+## 红线与禁区 (Hard Boundaries)
+1. **协议原版保护**：严禁未经人类授权直接修改根目录通用协议原版（变更须遵循优化版与补丁回流流程）；
+2. **决策链条完整**：严禁隐式推翻已 Accepted 决策；新方案必须记录 `Supersedes` 并附带确认来源；
+3. **协议产品解耦**：PCMP 仅为协同管理协议，严禁作为业务代码逻辑或运行依赖硬编码进产品源码；
+4. **材料审阅授权**：审阅、审计或样式检查的材料由人类指定或显式授权挑选，未获许可前不得擅自扫描全工程扩大审阅范围。

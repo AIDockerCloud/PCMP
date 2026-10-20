@@ -1,6 +1,6 @@
 # PCMP (Project Context Management Protocol)
 
-[![Version](https://img.shields.io/badge/Version-2.1-blue.svg)](PROJECT_CONTEXT_ZH.md)
+[![Version](https://img.shields.io/badge/Version-2.2-blue.svg)](PROJECT_CONTEXT_ZH.md)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![AI-Agnostic](https://img.shields.io/badge/AI--Agnostic-Universal-purple.svg)](PROJECT_CONTEXT.md)
 [![Recommended: STC](https://img.shields.io/badge/Recommended-STC-orange.svg)](https://github.com/daimonia-ai/STC-Simplified-Technical-Chinese)
@@ -13,22 +13,27 @@
 
 ## 📖 核心文档入口
 
-* 🇨🇳 **[PROJECT_CONTEXT_ZH.md](PROJECT_CONTEXT_ZH.md)**：完整中文规范手册（协议标准、Schema、交互指令、治理边界与自检清单）
+* 🇨🇳 **[PROJECT_CONTEXT_ZH.md](PROJECT_CONTEXT_ZH.md)**：完整中文规范手册（协议标准、Lite/Full 档位、Schema、交互指令、治理边界与自检清单）
 * 🌐 **[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)**：Full English Specification Manual
 
 ---
 
-## 🚀 极简上手：单文档开箱自举 (Zero-Tooling Quickstart)
+## 🚀 极简上手：单文档开箱自举与双档位 (Quickstart)
 
 > [!IMPORTANT]
-> **PCMP 的核心灵魂是“单文档驱动一切”，绝不强制绑定任何软件工具或外部依赖。**
+> **PCMP 的核心灵魂是“纯 Markdown 驱动一切”，绝不强制绑定任何软件工具或外部依赖。**
+
+为了杜绝在个人或小型项目中产生“治理通胀”，PCMP 原生支持双档位：
+
+* **PCMP Lite（极简 4 件套）**：专为单人、快速原型与维护期项目设计，仅需 4 个文件（`AGENTS.md` + `ai/PROJECT.md` + `ai/STATE.md` 合并活动任务 + `ai/DECISIONS.md`），免建任何复杂规划或会话归档；
+* **PCMP Full（完整套件）**：面向团队与多阶段长期工程，提供完整的任务单（`TASK.md`）、架构图谱、会话沉淀及自动化校验。
 
 在任何新项目中使用 PCMP，只需简单三步：
 
 1. **拷贝单文档**：将 [PROJECT_CONTEXT_ZH.md](PROJECT_CONTEXT_ZH.md)（或英文版 [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)）复制到新项目的根目录下；
 2. **一条指令初始化**：向你的 AI 助手（Cursor / Claude Code / Windsurf / GitHub Copilot / Antigravity 等）发送：
-   > `请读取 PROJECT_CONTEXT_ZH.md，初始化本项目的 ai/ 上下文管理体系并评估当前项目状态。`
-3. **完成自举**：AI 将全自动建立 `ai/` 状态目录。后续每次换新会话，AI 即可依据 `ai/STATE.md` 与 `ai/TASK.md` 毫秒级恢复进度并接管工作。
+   > `请读取 PROJECT_CONTEXT_ZH.md，按 Lite 档位初始化本项目的 ai/ 上下文管理体系并评估当前项目状态。`
+3. **完成自举**：AI 将全自动建立极简上下文。后续每次换新会话，AI 即可依据 `ai/STATE.md` 毫秒级恢复进度并接管工作。
 
 ---
 
@@ -123,23 +128,30 @@
 
 | 快捷命令 | 对应工作流 | 自动化执行内容 |
 | :--- | :--- | :--- |
-| `/pcmp init` | 上下文体系初始化 | 检查项目现状，全自动建立 `ai/` 规范目录与标准 Schema 文件。 |
+| `/pcmp init [lite\|full]` | 上下文体系初始化 | 检查项目现状，按 Lite（4 件套）或 Full（全功能）建立 `ai/` 规范目录。 |
 | `/pcmp takeover` | 跨会话 / 换新 AI 接管 | 严格按规范阅读 `PROJECT.md` ➔ `STATE.md` ➔ `TASK.md` 并向开发者汇报当前焦点。 |
-| `/pcmp finalize` | 会话收尾与沉淀 | 运行测试、审查 diff、沉淀 `ai/sessions/`、递增 revision、登记 ADR 并刷新索引。 |
-| `/pcmp adr <标题>` | 登记架构决策 | 按标准模板向 `ai/DECISIONS.md` 追加决策（缺失确认来源标 Proposed）。 |
+| `/pcmp check` | 自动化合规健全性校验 | 自动校验 Frontmatter 结构、revision、Accepted ADR 确认来源、中英双语版本对齐。 |
+| `/pcmp finalize` | 会话收尾与沉淀 | 运行测试与合规检查、审查 diff、沉淀会话、递增 revision、登记 ADR 并刷新索引。 |
+| `/pcmp adr <标题>` | 登记架构决策 | 按标准模板向 `ai/DECISIONS.md` 追加决策（带 Supersedes 与复审触发条件）。 |
 | `/pcmp assess` | 状态一致性诊断 | 只读分析源代码物理实现与架构文档脱节情况，输出诊断报告（不改代码）。 |
 | `/pcmp index` | 派生索引查询 | 结构化查询决策状态、检索分层标签或通过 FTS5 进行全文搜索。 |
 
 **引入方式**：
 将本仓库的 `skills/pcmp/` 目录复制到目标项目的 `.claude/skills/pcmp`（适用于 Claude Code）或 `.agents/skills/pcmp`（适用于 Antigravity）即可自动生效。
 
-### 2. 官方可选参考工具：SQLite 派生索引脚本 (`pcmp_index.py`)
+### 2. 官方可选参考工具：SQLite 派生索引与校验脚本 (`pcmp_index.py`)
 
-当项目长期演进、历史会话与决策较多时，可按需使用本仓库提供的单脚本 SQLite 索引加速层（基于 Python 3 原生标准库，**零外部 pip 依赖**）：
+当项目长期演进、历史会话与决策较多时，可按需使用本仓库提供的单脚本工具（基于 Python 3 原生标准库，**零外部 pip 依赖**）：
 
 ```bash
-# 可选：下载单脚本到项目中（不下载完全不影响 PCMP 核心运作）
+# 可选：下载单脚本到项目中（不下载完全不影响 PCMP 核心规范运作）
 curl -fsSL https://raw.githubusercontent.com/AIDockerCloud/PCMP/main/scripts/pcmp_index.py -o scripts/pcmp_index.py
+
+# 自动化合规检查 (强校验 Frontmatter、revision、Accepted ADR 确认来源、双语版本对齐)
+python3 scripts/pcmp_index.py --check
+
+# 运行自动化测试套件
+python3 -m unittest discover tests
 
 # 全量构建或增量更新派生缓存 (存放在 ai/.cache/index.sqlite，已被 .gitignore 忽略)
 python3 scripts/pcmp_index.py --rebuild
@@ -174,12 +186,11 @@ npx stc check <文件路径>
 
 ## 🏷️ 版本与发布
 
-* **当前版本**：V2.1
+* **当前版本**：V2.2
 * **更新内容**：
-  - 明确“单文档开箱自举”核心定位与单仓库分层架构（规范 / 可选工具 / 自举范例）；
-  - 引入能力边界声明（Non-promises）与冲突分级核验机制；
-  - 规范 Frontmatter 变更标记（`revision`）与信息分层标注（`[事实]/[假设]/[提议]/[已确认]`）；
-  - 架构决策记录（ADR）增加强制确认来源追溯；
-  - 确立无历史记忆的新 Agent“恢复测试”验收标准；
-  - 实现零依赖 Python 3 原生 SQLite 派生索引层（`scripts/pcmp_index.py`）；
-  - 增加推荐搭配技术中文工具（STC）安装使用说明与材料审阅授权准则。
+  - 推出 **PCMP Lite**（极简 4 件套）与 **PCMP Full**（全功能套件）双档位规范，杜绝小项目“治理通胀”；
+  - `AGENTS.md` 瘦身治理：精简中文写作约束，增加 15 行工程硬事实、常用命令与红线禁区；
+  - 强化 `TASK.md` 结构：新增必选/强推荐 `Constraints & Non-Goals` 与 `Relevant Files`；
+  - 强化架构决策记录（ADR）：新增 `Supersedes`、`Superseded-by` 与 `复审触发条件 (Review Trigger)` 链路字段；
+  - 引入机器自动化合规校验命令 `python3 scripts/pcmp_index.py --check` 与配套自动化测试套件；
+  - 升级官方 PCMP Skill，新增 `/pcmp check` 指令与分档初始化工作流。

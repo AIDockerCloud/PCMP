@@ -1,11 +1,11 @@
 ---
-pcmp_version: "2.1"
-updated: 2026-10-19
+pcmp_version: "2.2"
+updated: 2026-10-20
 ---
 
 # Project Context Management Protocol (PCMP)
 
-- **Version**: **2.1** (2026-10-19)
+- **Version**: **2.2** (2026-10-20)
 - **Document Role**: This file is the **original generic protocol template**, containing no project-specific state or private details.
 - **Chinese Version**: [PROJECT_CONTEXT_ZH.md](PROJECT_CONTEXT_ZH.md) (Content is bidirectionally aligned; discrepancies are treated as translation synchronization tasks).
 - **Resolution Rule**: If `ai/PROJECT_CONTEXT.md` (project instance) exists, it takes precedence; otherwise, this root original is authoritative (see §3.1).
@@ -84,6 +84,25 @@ Project Root/
 - **Bilingual Alignment**: Rules in Chinese and English must remain identical; discrepancies must be resolved by synchronization.
 - **General Improvement Flow**: If a project instance produces cross-project protocol enhancements, do not overwrite originals directly. Generate root candidate files (`PROJECT_CONTEXT.optimized-<id>.md`, `PROJECT_CONTEXT_ZH.optimized-<id>.md` and patch note `PCMP-PATCH-<id>.md`). Candidates take effect only upon human confirmation.
 
+### 3.2 PCMP Tiers: Lite vs Full
+
+To prevent "Governance Inflation" in small or single-developer workflows, PCMP specifies two practical tiers:
+
+#### 1. PCMP Lite (Minimal 4-Piece Set)
+- **Use Cases**: Single-developer projects, rapid prototyping, scripts/utility libraries, legacy maintenance.
+- **Core Composition (Only 4 files)**:
+  1. `AGENTS.md` (or platform config like `.cursorrules` / `CLAUDE.md`): Hard engineering facts, commands, boundaries;
+  2. `ai/PROJECT.md`: Purpose, mission, non-goals & hard constraints;
+  3. `ai/STATE.md`: **Consolidates global state and active task** (includes current task objective, criteria, and next action; eliminates standalone `TASK.md`);
+  4. `ai/DECISIONS.md`: Logs architectural decisions and confirmation sources.
+- **Excluded**: No requirement for `PLAN.md`, `ISSUES.md`, `sessions/` (tracked via git commits or inside `STATE.md`), or derivative index.
+- **Smooth Upgrade**: When complexity grows, split out `TASK.md` and `sessions/` to upgrade smoothly to Full tier.
+
+#### 2. PCMP Full (Complete Governance Suite)
+- **Use Cases**: Team collaboration, multi-phase systems, enterprise-scale products.
+- **Core Composition**: Complete set of `PROJECT.md`, `ARCHITECTURE.md`, `STATE.md`, `TASK.md`, `PLAN.md`, `DECISIONS.md`, `ISSUES.md`, and `sessions/` archives.
+- **Tooling Support**: Recommended SQLite derivative index (`scripts/pcmp_index.py`) and automated compliance check (`--check`).
+
 ---
 
 ## 4. File Schema Specifications
@@ -92,9 +111,9 @@ Project Root/
 All dynamically updated files (`STATE.md`, `TASK.md`, etc.) must include a standard Frontmatter:
 ```yaml
 ---
-pcmp_version: "2.1"
+pcmp_version: "2.2"
 revision: 1
-updated: 2026-10-19
+updated: 2026-10-20
 ---
 ```
 > **Rule**: Read `revision` before writing; increment `revision + 1` upon meaningful changes. Merge on top of newer versions; never overwrite silently.
@@ -104,6 +123,9 @@ updated: 2026-10-19
 ## DEC-NNN — Decision Title
 Date: YYYY-MM-DD | Status: Accepted / Proposed / Deprecated / Superseded
 - Confirmation Source: <Who confirmed, when, with session/approval link> (Missing = always Proposed)
+- Supersedes: <Previous DEC replaced, e.g. DEC-002, or None>
+- Superseded-by: <Subsequent DEC replacing this, or None>
+- Review Trigger: <Conditions or events triggering re-evaluation>
 - Context: Current situation and problem
 - Decision: Chosen technical or architectural solution
 - Reason: Why this solution was chosen
@@ -113,8 +135,14 @@ Date: YYYY-MM-DD | Status: Accepted / Proposed / Deprecated / Superseded
 > **Rule**: Silently reversing accepted decisions is prohibited; new decisions must explicitly reference and supersede previous records.
 
 ### 4.3 `STATE.md` / `TASK.md` / Session Records
-- **`STATE.md`**: Kept concise for instant ingestion: `Last Updated` / `Overall Status` / `Completed` / `In Progress` / `Blocked` / `Current Risks & Focus` / `Immediate Next Action`.
-- **`TASK.md`**: **Tracks only the single currently active task**: `Current Task & Objective` / `Why & Scope` / `Acceptance Criteria` / `Current Progress & Blocker` / `Immediate Next Action`.
+- **`STATE.md`**: Kept concise for instant ingestion: `Last Updated` / `Overall Status` / `Completed` / `In Progress` / `Blocked` / `Current Risks & Focus` / `Immediate Next Action`. In Lite tier, directly embeds active task details.
+- **`TASK.md`** (Full Tier): **Tracks only the single currently active task**:
+  - `Current Task & Objective`
+  - `Why & Scope`
+  - `Constraints & Non-Goals` (Hard constraints and explicit non-goals to prevent scope creep)
+  - `Relevant Files` (Key paths, configs, tests)
+  - `Acceptance Criteria` (Verifiable criteria with checkboxes)
+  - `Immediate Next Action`
 - **`sessions/SESSION-YYYY-MM-DD-NNN.md`**: Metadata (date/agent/task/status) / `Goal & Why` / `What` (actual code/config changes) / `Result` (tests/state) / `Issues & Decisions` / `Next`.
 
 ### 4.4 Information Layering Labels
@@ -147,17 +175,17 @@ All `ai/` records should use explicit status tags:
 
 ### 5.2 Session Completion Flow
 ```text
-1. Verify deliverables: Run tests & static analysis to satisfy acceptance criteria
+1. Verify deliverables & compliance: Run tests and static analysis; run python3 scripts/pcmp_index.py --check if tooling is present
    ↓
 2. Review changes: Run git status / diff to ensure bounded scope
    ↓
-3. Record session: Write ai/sessions/SESSION-YYYY-MM-DD-NNN.md
+3. Record session: Write ai/sessions/SESSION-YYYY-MM-DD-NNN.md (Full tier) or merge into STATE (Lite tier)
    ↓
 4. Update state: Refresh ai/STATE.md & ai/TASK.md (increment revision & date)
    ↓
 5. Register decisions: Log any architectural change in DECISIONS.md (unconfirmed = Proposed)
    ↓
-6. (Optional) Refresh index: Update SQLite cache if index is active
+6. (Optional) Refresh index: Update SQLite cache (python3 scripts/pcmp_index.py --update)
    ↓
 7. Persist & commit: Execute git commit or persistence step
 ```
@@ -248,4 +276,4 @@ Human developers can copy these standardized prompts across any AI coding agent:
 - [ ] **Review Material Authorization (Recommended Practice)**: **Materials for review, audit, or stylistic checks must be explicitly specified or authorized by humans**; AI must not scan the full workspace or expand review scope without permission.
 - [ ] **Scope Control**: Stay focused strictly within task scope; propose ADRs for architectural deviations.
 - [ ] **Decision Validity**: All Accepted ADRs include a verified `- Confirmation Source`.
-- [ ] **Post-Session**: Tests passed, session logged under `sessions/`, `STATE.md` and `TASK.md` updated with incremented `revision`.
+- [ ] **Post-Session**: Tests passed, `--check` passed cleanly (if tooling is active), session logged under `sessions/`, `STATE.md` and `TASK.md` updated with incremented `revision`.

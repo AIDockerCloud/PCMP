@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-PCMP (Project Context Management Protocol) SQLite Derivative Indexer
+PCMP (Project Context Management Protocol) SQLite Derivative Indexer & Compliance Checker
 Plan A: Zero-dependency implementation using Python 3 standard library.
 Generates and maintains a rebuildable index cache at ai/.cache/index.sqlite.
+Includes automated --check command to enforce schema, revision, and ADR confirmation rules.
 """
 
 import argparse
@@ -31,7 +32,7 @@ TAG_NORMALIZATION = {
 
 
 def find_project_root() -> Path:
-    """Locate project root by searching upwards for PROJECT_CONTEXT_ZH.md or .git."""
+    """Locate project root by searching upwards for PROJECT_CONTEXT_ZH.md, PROJECT_CONTEXT.md, or .git."""
     curr = Path.cwd().resolve()
     for parent in [curr] + list(curr.parents):
         if (parent / "PROJECT_CONTEXT_ZH.md").exists() or (parent / "PROJECT_CONTEXT.md").exists():
@@ -77,6 +78,9 @@ class PCMPIndex:
                 date TEXT,
                 status TEXT NOT NULL,
                 confirmation_source TEXT,
+                supersedes TEXT,
+                superseded_by TEXT,
+                review_trigger TEXT,
                 context TEXT,
                 decision TEXT,
                 reason TEXT,
@@ -85,6 +89,13 @@ class PCMPIndex:
                 raw_markdown TEXT
             );
         """)
+
+        # Ensure schema migrations for existing decisions table
+        cur.execute("PRAGMA table_info(decisions)")
+        existing_dec_cols = {row[1] for row in cur.fetchall()}
+        for col in ["supersedes", "superseded_by", "review_trigger"]:
+            if col not in existing_dec_cols:
+                cur.execute(f"ALTER TABLE decisions ADD COLUMN {col} TEXT")
 
         # 3. Issues
         cur.execute("""
@@ -137,7 +148,6 @@ class PCMPIndex:
                 );
             """)
         except sqlite3.OperationalError:
-            # Fallback if FTS5 is not compiled in sqlite3
             pass
 
         conn.commit()
@@ -168,14 +178,12 @@ class PCMPIndex:
 
     def extract_tags(self, file_path_rel: str, text: str, cur: sqlite3.Cursor):
         """Extract information layering tags [事实], [假设], [提议], [已确认], [未决] etc."""
-        # Remove old tags for this file
         cur.execute("DELETE FROM tagged_items WHERE file_path = ?", (file_path_rel,))
         tag_regex = re.compile(r"\[(事实|假设|提议|已确认|未决|fact|assumption|proposal|accepted|open)\]", re.IGNORECASE)
 
         for line_no, line in enumerate(text.splitlines(), start=1):
             matches = tag_regex.findall(line)
             if matches:
-                # Store the line content cleaned up
                 content = line.strip()
                 for match in set(matches):
                     norm = TAG_NORMALIZATION.get(match.lower(), match.lower())
@@ -187,7 +195,6 @@ class PCMPIndex:
     def index_decisions(self, text: str, cur: sqlite3.Cursor):
         """Parse ADRs from DECISIONS.md."""
         cur.execute("DELETE FROM decisions")
-        # Split on ## DEC-
         pattern = re.compile(r"^##\s+(DEC-\d+)\s+[—\-]\s+(.+)$", re.MULTILINE)
         matches = list(pattern.finditer(text))
 
@@ -201,6 +208,9 @@ class PCMPIndex:
             date_val = ""
             status_val = "Proposed"
             conf_source = ""
+            supersedes_val = ""
+            superseded_by_val = ""
+            review_trigger_val = ""
             context_val = ""
             decision_val = ""
             reason_val = ""
@@ -210,7 +220,6 @@ class PCMPIndex:
             for line in block.splitlines():
                 line_s = line.strip()
                 if line_s.startswith("日期:") or line_s.startswith("Date:"):
-                    # e.g. 日期: 2026-10-19 | 状态: Accepted
                     if "|" in line_s:
                         parts = line_s.split("|")
                         date_val = parts[0].split(":", 1)[1].strip()
@@ -219,6 +228,12 @@ class PCMPIndex:
                         date_val = line_s.split(":", 1)[1].strip()
                 elif line_s.startswith("- 确认来源:") or line_s.startswith("- Confirmation Source:"):
                     conf_source = line_s.split(":", 1)[1].strip()
+                elif line_s.startswith("- Supersedes:") or line_s.startswith("- 取代决策:"):
+                    supersedes_val = line_s.split(":", 1)[1].strip()
+                elif line_s.startswith("- Superseded-by:") or line_s.startswith("- 被取代:"):
+                    superseded_by_val = line_s.split(":", 1)[1].strip()
+                elif line_s.startswith("- 复审触发条件:") or line_s.startswith("- Review Trigger:"):
+                    review_trigger_val = line_s.split(":", 1)[1].strip()
                 elif line_s.startswith("- 背景") or line_s.startswith("- Context:"):
                     context_val = line_s.split(":", 1)[1].strip()
                 elif line_s.startswith("- 决策") or line_s.startswith("- Decision:"):
@@ -232,15 +247,16 @@ class PCMPIndex:
 
             cur.execute("""
                 INSERT OR REPLACE INTO decisions (
-                    id, title, date, status, confirmation_source, context, decision, reason, alternatives, consequences, raw_markdown
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (dec_id, title, date_val, status_val, conf_source, context_val, decision_val, reason_val, alt_val, conseq_val, block))
+                    id, title, date, status, confirmation_source, supersedes, superseded_by, review_trigger,
+                    context, decision, reason, alternatives, consequences, raw_markdown
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (dec_id, title, date_val, status_val, conf_source, supersedes_val, superseded_by_val, review_trigger_val,
+                  context_val, decision_val, reason_val, alt_val, conseq_val, block))
 
     def index_issues(self, text: str, cur: sqlite3.Cursor):
         """Parse ISSUES.md tables or lists."""
         cur.execute("DELETE FROM issues")
         for line in text.splitlines():
-            # Table row: | ISS-001 | 状态 | 描述 | ...
             if "|" in line and "ISS-" in line:
                 cols = [c.strip() for c in line.split("|") if c.strip()]
                 if len(cols) >= 3 and cols[0].startswith("ISS-"):
@@ -329,13 +345,11 @@ class PCMPIndex:
         cur = conn.cursor()
 
         target_files = []
-        # Protocol files in root
         for root_file in ["PROJECT_CONTEXT_ZH.md", "PROJECT_CONTEXT.md", "README.md", "AGENTS.md"]:
             p = self.root_dir / root_file
             if p.exists():
                 target_files.append(p)
 
-        # All markdown files under ai/ (excluding .cache/)
         if self.ai_dir.exists():
             for p in self.ai_dir.rglob("*.md"):
                 if ".cache" not in p.parts:
@@ -351,6 +365,111 @@ class PCMPIndex:
         conn.commit()
         conn.close()
         return indexed_count, total_files
+
+    def check_compliance(self) -> tuple[list[str], list[str]]:
+        """
+        Automated compliance and sanity check for PCMP repository:
+        1. Frontmatter check on dynamic files (ai/STATE.md, ai/TASK.md).
+        2. ADR check on ai/DECISIONS.md: Accepted decisions MUST have confirmation_source.
+        3. Supersedes check: verify cited decision exists.
+        4. Freshness check: warn if STATE.md updated_at is older than 14 days.
+        5. Bilingual check: ensure PROJECT_CONTEXT_ZH.md and PROJECT_CONTEXT.md versions match.
+        """
+        errors = []
+        warnings = []
+
+        # 1. Frontmatter check on dynamic files
+        for rel_file in ["ai/STATE.md", "ai/TASK.md"]:
+            p = self.root_dir / rel_file
+            if p.exists():
+                content = p.read_text(encoding="utf-8")
+                fm, _ = self.parse_frontmatter(content)
+                if not fm:
+                    errors.append(f"[{rel_file}] Missing YAML Frontmatter (---)")
+                else:
+                    if "pcmp_version" not in fm:
+                        errors.append(f"[{rel_file}] Frontmatter missing 'pcmp_version'")
+                    if "revision" not in fm:
+                        errors.append(f"[{rel_file}] Frontmatter missing 'revision'")
+                    else:
+                        try:
+                            rev = int(fm["revision"])
+                            if rev < 1:
+                                errors.append(f"[{rel_file}] 'revision' must be >= 1, got {rev}")
+                        except ValueError:
+                            errors.append(f"[{rel_file}] 'revision' must be an integer, got: '{fm['revision']}'")
+                    if "updated" not in fm:
+                        errors.append(f"[{rel_file}] Frontmatter missing 'updated' date")
+                    else:
+                        try:
+                            updated_dt = datetime.datetime.strptime(fm["updated"], "%Y-%m-%d").date()
+                            days_old = (datetime.date.today() - updated_dt).days
+                            if days_old > 14:
+                                warnings.append(f"[{rel_file}] 'updated' date ({fm['updated']}) is {days_old} days old. State may be stale.")
+                        except ValueError:
+                            errors.append(f"[{rel_file}] 'updated' format invalid, expected YYYY-MM-DD, got: '{fm['updated']}'")
+
+        # 1b. Schema check for ai/TASK.md if present
+        task_p = self.root_dir / "ai/TASK.md"
+        if task_p.exists():
+            task_txt = task_p.read_text(encoding="utf-8")
+            if not any(k in task_txt for k in ["Constraints", "Non-Goals", "约束", "非目标"]):
+                warnings.append("[ai/TASK.md] Missing recommended 'Constraints & Non-Goals (约束与非目标)' section")
+            if not any(k in task_txt for k in ["Relevant Files", "关联文件", "关键文件"]):
+                warnings.append("[ai/TASK.md] Missing recommended 'Relevant Files (关联关键文件)' section")
+
+        # 2. ADR check
+        dec_file = self.root_dir / "ai/DECISIONS.md"
+        if dec_file.exists():
+            content = dec_file.read_text(encoding="utf-8")
+            pattern = re.compile(r"^##\s+(DEC-\d+)\s+[—\-]\s+(.+)$", re.MULTILINE)
+            matches = list(pattern.finditer(content))
+            all_dec_ids = set()
+            dec_entries = []
+
+            for i, match in enumerate(matches):
+                dec_id = match.group(1).strip()
+                all_dec_ids.add(dec_id)
+                start = match.end()
+                end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
+                block = content[start:end].strip()
+
+                status_val = "Proposed"
+                conf_source = ""
+                supersedes_val = ""
+
+                for line in block.splitlines():
+                    ls = line.strip()
+                    if ls.startswith("日期:") or ls.startswith("Date:"):
+                        if "|" in ls:
+                            status_val = ls.split("|")[1].split(":", 1)[1].strip()
+                    elif ls.startswith("- 确认来源:") or ls.startswith("- Confirmation Source:"):
+                        conf_source = ls.split(":", 1)[1].strip()
+                    elif ls.startswith("- Supersedes:") or ls.startswith("- 取代决策:"):
+                        supersedes_val = ls.split(":", 1)[1].strip()
+
+                dec_entries.append((dec_id, status_val, conf_source, supersedes_val))
+
+            for dec_id, status_val, conf_source, supersedes_val in dec_entries:
+                if status_val.lower() == "accepted":
+                    if not conf_source or conf_source.lower() in ["none", "待确认", "无", "todo"]:
+                        errors.append(f"[DECISIONS.md] {dec_id} is marked 'Accepted' but lacks valid '确认来源 (Confirmation Source)'")
+                if supersedes_val and supersedes_val.strip().lower() not in ["无", "none", "n/a", "-", "nil"]:
+                    if supersedes_val not in all_dec_ids:
+                        warnings.append(f"[DECISIONS.md] {dec_id} cites non-existent Supersedes target: '{supersedes_val}'")
+
+        # 3. Bilingual version parity check
+        zh_path = self.root_dir / "PROJECT_CONTEXT_ZH.md"
+        en_path = self.root_dir / "PROJECT_CONTEXT.md"
+        if zh_path.exists() and en_path.exists():
+            fm_zh, _ = self.parse_frontmatter(zh_path.read_text(encoding="utf-8"))
+            fm_en, _ = self.parse_frontmatter(en_path.read_text(encoding="utf-8"))
+            ver_zh = fm_zh.get("pcmp_version")
+            ver_en = fm_en.get("pcmp_version")
+            if ver_zh and ver_en and ver_zh != ver_en:
+                errors.append(f"Bilingual version parity mismatch: ZH is {ver_zh}, EN is {ver_en}")
+
+        return errors, warnings
 
     def get_stats(self) -> dict:
         if not self.db_path.exists():
@@ -368,7 +487,6 @@ class PCMPIndex:
             cur.execute(f"SELECT COUNT(*) FROM {table}")
             stats[table + "_count"] = cur.fetchone()[0]
 
-        # Tag breakdown
         cur.execute("SELECT normalized_tag, COUNT(*) FROM tagged_items GROUP BY normalized_tag")
         stats["tags_breakdown"] = {row[0]: row[1] for row in cur.fetchall()}
 
@@ -416,7 +534,6 @@ class PCMPIndex:
         except sqlite3.OperationalError:
             pass
 
-        # If FTS returns no results (e.g. CJK terms without whitespace), fallback to LIKE search
         if not results:
             cur.execute("""
                 SELECT file_path, section_title, body_text
@@ -444,9 +561,10 @@ class PCMPIndex:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="PCMP SQLite Derivative Indexer (Plan A)")
+    parser = argparse.ArgumentParser(description="PCMP SQLite Derivative Indexer & Compliance Checker")
     parser.add_argument("--rebuild", action="store_true", help="Full rebuild of SQLite database")
     parser.add_argument("--update", action="store_true", help="Incremental index of modified files")
+    parser.add_argument("--check", action="store_true", help="Automated compliance check for schema, revisions & ADR rules")
     parser.add_argument("--status", action="store_true", help="Display index cache statistics")
     parser.add_argument("--query-decisions", action="store_true", help="List architectural decision records (ADRs)")
     parser.add_argument("--query-tags", action="store_true", help="List information layering tagged items")
@@ -458,6 +576,21 @@ def main():
     args = parser.parse_args()
     root = find_project_root()
     index = PCMPIndex(root)
+
+    if args.check:
+        errors, warnings = index.check_compliance()
+        if warnings:
+            print(f"⚠️  {len(warnings)} warning(s) found:")
+            for w in warnings:
+                print(f"  - {w}")
+        if errors:
+            print(f"❌ {len(errors)} error(s) found in PCMP compliance check:")
+            for e in errors:
+                print(f"  - {e}")
+            sys.exit(1)
+        else:
+            print("✅ PCMP compliance check passed! All schemas, revisions and ADR confirmations are valid.")
+            sys.exit(0)
 
     if args.rebuild:
         indexed, total = index.scan_and_index(rebuild=True)
@@ -489,6 +622,10 @@ def main():
                 print(f"  [{d['id']}] {d['title']} (Status: {d['status']}, Date: {d['date']})")
                 if d.get("confirmation_source"):
                     print(f"    - Source: {d['confirmation_source']}")
+                if d.get("supersedes"):
+                    print(f"    - Supersedes: {d['supersedes']}")
+                if d.get("review_trigger"):
+                    print(f"    - Review Trigger: {d['review_trigger']}")
                 if d.get("decision"):
                     print(f"    - Decision: {d['decision']}")
         return
@@ -514,7 +651,6 @@ def main():
                 print(f"    {r['snippet']}\n")
         return
 
-    # Default action if no flags provided: display help
     parser.print_help()
 
 

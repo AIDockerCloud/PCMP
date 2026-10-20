@@ -1,11 +1,11 @@
 ---
-pcmp_version: "2.1"
-updated: 2026-10-19
+pcmp_version: "2.2"
+updated: 2026-10-20
 ---
 
 # 项目上下文管理协议 (PCMP — Project Context Management Protocol)
 
-- **版本**：**2.1** (2026-10-19)
+- **版本**：**2.2** (2026-10-20)
 - **文档性质**：本文档为**通用协议原版（模板）**，不包含任何特定项目的业务状态信息。
 - **英文对应**：[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)（中英文内容对齐，若有表述差异以核对后的最新版为准）。
 - **生效规则**：若当前工程存在 `ai/PROJECT_CONTEXT_ZH.md`（项目使用版），以使用版为准；否则以根目录本原版为准（见 §3.1）。
@@ -84,6 +84,25 @@ PCMP 明确**不承诺**以下事项：
 - **双语对齐**：使用版的中英文规则须保持一致，发现冲突核实后同步修订，严禁隐式单边合并。
 - **通用改进回流机制**：使用版演进中若产生具备跨项目通用价值的规则改进，不得直接回写根目录原版；应在根目录生成候选补丁文件：`PROJECT_CONTEXT.optimized-<编号>.md`、`PROJECT_CONTEXT_ZH.optimized-<编号>.md` 与补丁说明 `PCMP-PATCH-<编号>.md`。由人类确认后再统一晋升为新原版。
 
+### 3.2 档位划分：Lite 与 Full (Tiers)
+
+为了避免在小型项目或单人研发中产生“治理通胀 (Governance Inflation)”，PCMP 区分两种应用档位：
+
+#### 1. PCMP Lite (极简 4 件套)
+- **适用场景**：单人独立项目、原型验证、小型脚本/工具库、维护期老项目。
+- **核心构成（仅需 4 个文件）**：
+  1. `AGENTS.md` (或平台规则文件如 `.cursorrules` / `CLAUDE.md`)：定义硬事实、常用命令与禁区；
+  2. `ai/PROJECT.md`：记录项目宗旨、范围与硬约束；
+  3. `ai/STATE.md`：**将全局状态与当前唯一活动任务合并**（包含当前任务目标、验收指标与 Next Action，无需单独建立 `TASK.md`）；
+  4. `ai/DECISIONS.md`：记录重大技术方案与确认来源。
+- **免建内容**：无需建立 `PLAN.md`、`ISSUES.md`、`sessions/`（通过 Git 提交或合并于 `STATE.md` 追踪）及派生索引。
+- **平滑升级**：当项目进入多人协作或多阶段复杂开发时，可平滑分立出 `TASK.md` 与 `sessions/` 晋升为 Full 档位。
+
+#### 2. PCMP Full (完整治理套件)
+- **适用场景**：团队协作、中大型系统、多阶段交付、长期演进项目。
+- **核心构成**：包含完整的 `PROJECT.md`、`ARCHITECTURE.md`、`STATE.md`、`TASK.md`、`PLAN.md`、`DECISIONS.md`、`ISSUES.md` 与 `sessions/` 归档。
+- **配套赋能**：推荐启用 SQLite 派生索引层 (`scripts/pcmp_index.py`) 与自动化合规检查 (`--check`)。
+
 ---
 
 ## 4. 文件 Schema 规范
@@ -92,9 +111,9 @@ PCMP 明确**不承诺**以下事项：
 所有动态更新文件（`STATE.md`、`TASK.md` 等）必须包含统一 Frontmatter 头：
 ```yaml
 ---
-pcmp_version: "2.1"
+pcmp_version: "2.2"
 revision: 1
-updated: 2026-10-19
+updated: 2026-10-20
 ---
 ```
 > **规则**：写入前先读取当前 `revision`；文件发生实质变更时 `revision + 1`。若发现版本落后，须基于最新内容合并，严禁静默覆盖。
@@ -104,6 +123,9 @@ updated: 2026-10-19
 ## DEC-NNN — 决策标题
 日期: YYYY-MM-DD | 状态: Accepted / Proposed / Deprecated / Superseded
 - 确认来源: <谁在何时确认,附会话/审批链接> (缺失此字段一律视为 Proposed)
+- Supersedes: <取代的旧 DEC 编号，如 DEC-002，若无填 无>
+- Superseded-by: <被哪个后续 DEC 取代，若无填 无>
+- 复审触发条件 (Review Trigger): <何时或满足什么条件须重新评估此决策>
 - 背景 (Context): 现状与痛点
 - 决策 (Decision): 采纳的技术或架构方案
 - 理由 (Reason): 选择该方案的核心原因
@@ -113,8 +135,14 @@ updated: 2026-10-19
 > **规则**：严禁隐式推翻已 Accepted 的决策；新方案必须提出新 DEC 并明确标记取代关系。
 
 ### 4.3 `STATE.md` / `TASK.md` / 会话记录
-- **`STATE.md`**：保持极高信息密度供 AI 毫秒级摄入：`Last Updated` / `Overall Status` / `Completed` / `In Progress` / `Blocked` / `Current Risks & Focus` / `Immediate Next Action`。
-- **`TASK.md`**：**仅维护当前唯一的活动任务**：`Current Task & Objective` / `Why & Scope` / `Acceptance Criteria` / `Current Progress & Blocker` / `Immediate Next Action`。
+- **`STATE.md`**：保持极高信息密度供 AI 毫秒级摄入：`Last Updated` / `Overall Status` / `Completed` / `In Progress` / `Blocked` / `Current Risks & Focus` / `Immediate Next Action`。在 Lite 档位下，直接内嵌活动任务字段。
+- **`TASK.md`**（Full 档位）：**仅维护当前唯一的活动任务**：
+  - `Current Task & Objective` (当前任务与核心目标)
+  - `Why & Scope` (背景动机与涉及范围)
+  - `Constraints & Non-Goals` (硬约束与明确的非目标，防止范围蔓延)
+  - `Relevant Files` (关联的关键源码、配置或文档路径)
+  - `Acceptance Criteria` (可客观核验的验收标准与完成勾选)
+  - `Immediate Next Action` (即时下一步动作)
 - **`sessions/SESSION-YYYY-MM-DD-NNN.md`**：元数据（日期/Agent/任务/状态） / `Goal & Why` / `What`（实际变更代码与配置） / `Result`（测试与状态） / `Issues & Decisions` / `Next`。
 
 ### 4.4 信息分层标注规范
@@ -147,17 +175,17 @@ updated: 2026-10-19
 
 ### 5.2 会话收尾工作流 (Session Completion Flow)
 ```text
-1. 产物验证: 运行自动化测试与静态检查，验证是否满足验收标准
+1. 产物与合规验证: 运行自动化测试与静态检查；若存在派生工具，执行 python3 scripts/pcmp_index.py --check 验证状态与决策完整性
    ↓
 2. 变更审查: 执行 git status / diff，确认变更范围未超出任务定义
    ↓
-3. 沉淀会话: 编写 ai/sessions/SESSION-YYYY-MM-DD-NNN.md 会话记录
+3. 沉淀会话: 编写 ai/sessions/SESSION-YYYY-MM-DD-NNN.md 会话记录 (Full 档位) 或合并记录于 STATE (Lite 档位)
    ↓
 4. 更新状态: 刷新 ai/STATE.md 与 ai/TASK.md (更新 revision 与日期)
    ↓
 5. 登记决策: 若涉及架构/规则变动，在 DECISIONS.md 追加 ADR (未确认标 Proposed)
    ↓
-6. (可选) 刷新派生索引: 若启用了 SQLite 索引则更新缓存
+6. (可选) 刷新派生索引: 若启用了 SQLite 索引则更新缓存 (python3 scripts/pcmp_index.py --update)
    ↓
 7. 持久化归档: 进行 Git 提交或持久化保存
 ```
@@ -248,4 +276,4 @@ updated: 2026-10-19
 - [ ] **材料审阅授权（推荐实践）**：**审阅、审计或格式检查的材料由人类指定或显式授权挑选**；未获用户明确许可前，AI 不得擅自扫描全工程扩大审阅范围。
 - [ ] **过程中控制**：严格专注当前任务范围，未盲目引入无关重构；重大架构设计已登记为 ADR 提议 (`[提议]`)。
 - [ ] **决策真实性**：已确认的 ADR 均具备可靠的 `- 确认来源` 记录。
-- [ ] **收尾前自检**：实现与测试已通过，会话已沉淀至 `sessions/`，`STATE.md` 与 `TASK.md` 已同步更新并递增 `revision`。
+- [ ] **收尾前自检**：实现与测试已通过，执行 `--check` 无错误（若启用派生工具），会话已沉淀至 `sessions/`，`STATE.md` 与 `TASK.md` 已同步更新并递增 `revision`。
